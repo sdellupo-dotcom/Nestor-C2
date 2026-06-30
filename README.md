@@ -1,432 +1,262 @@
-// Routes d'authentification.
-// Reprend la logique métier validée dans nos échanges :
-//  - auto-inscription avec vérification de domaine
-//  - activation automatique au clic du lien (pas d'étape manuelle)
-//  - aucune fuite d'information sur les comptes existants
-//  - mots de passe hachés en argon2id, jamais stockés en clair
+# Nestor-C2 — Portail de Services Internes
 
-const express = require('express');
-const argon2 = require('argon2');
-const { body, validationResult } = require('express-validator');
-const { pool } = require('../db/pool');
-const { isAllowedDomain } = require('../utils/emailDomain');
-const {
-  generateToken,
-  hashToken,
-  getExpiryDate,
-  EMAIL_VERIFICATION_TTL_HOURS,
-  PASSWORD_RESET_TTL_HOURS,
-  PASSWORD_SETUP_TTL_HOURS,
-} = require('../utils/tokens');
-const { sendVerificationEmail, sendPasswordResetEmail } = require('../utils/mailer');
+> Un portail sécurisé pour la gestion des demandes internes (arrivées/départs, fournitures, etc.)
 
-const router = express.Router();
+## 📌 À propos
 
-// Message volontairement identique dans tous les cas (nouveau compte,
-// compte déjà actif, compte en attente) pour ne pas permettre à quelqu'un
-// de déduire si une adresse e-mail est déjà inscrite (anti-énumération).
-const GENERIC_SIGNUP_RESPONSE = {
-  message:
-    "Si les conditions sont remplies, un e-mail de vérification a été envoyé à l'adresse fournie.",
-};
+**Nestor-C2** est une application web conçue pour les organisations souhaitant centraliser et simplifier la gestion des demandes internes. Elle permet aux agents de soumettre des formulaires (ex: arrivée/départ, commandes de fournitures) et aux valideurs de les traiter.
 
-// ---------------------------------------------------------------
-// POST /api/auth/signup
-// ---------------------------------------------------------------
-router.post(
-  '/signup',
-  [
-    body('firstName').trim().notEmpty().withMessage('Le prénom est requis.'),
-    body('lastName').trim().notEmpty().withMessage('Le nom est requis.'),
-    body('email').trim().isEmail().withMessage('Adresse e-mail invalide.'),
-    body('password').isLength({ min: 8 }).withMessage('Le mot de passe doit contenir au moins 8 caractères.'),
-  ],
-  async (req, res) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ error: errors.array()[0].msg });
-    }
+### Fonctionnalités clés
+- ✅ **Authentification sécurisée** : Inscription avec vérification par e-mail, connexion par mot de passe (haché en Argon2id)
+- ✅ **Gestion des rôles** : Agents, Valideurs, Administrateurs
+- ✅ **Formulaires personnalisables** : Catégories et types de demandes configurables
+- ✅ **Restriction réseau** : Accès limité au réseau interne de l'organisation
+- ✅ **Suivi des demandes** : Historique des statuts et notifications
+- ✅ **Réinitialisation de mot de passe** : Lien sécurisé envoyé par e-mail
 
-    const { firstName, lastName, password } = req.body;
-    const email = req.body.email.trim().toLowerCase();
+---
 
-    // Le domaine non autorisé est la SEULE situation où l'on répond
-    // différemment — ce n'est pas une fuite d'information sur les comptes,
-    // c'est une règle d'accès publique (le domaine accepté n'est pas secret).
-    if (!isAllowedDomain(email)) {
-      return res.status(403).json({
-        error: "Seules les adresses e-mail du domaine autorisé peuvent créer un compte.",
-      });
-    }
+## 🚀 Installation
 
-    const client = await pool.connect();
-    try {
-      await client.query('BEGIN');
+### Prérequis
+- [Node.js](https://nodejs.org/) ≥ 18.x
+- [PostgreSQL](https://www.postgresql.org/) ≥ 13
+- Un serveur SMTP interne (pour l'envoi d'e-mails)
+- Accès au réseau interne de l'organisation
 
-      const existing = await client.query('SELECT id, status FROM users WHERE email = $1', [email]);
+### 1. Cloner le dépôt
+```bash
+git clone https://github.com/sdellupo-dotcom/Nestor-C2.git
+cd Nestor-C2
+```
 
-      let userId;
+### 2. Installer les dépendances
+```bash
+npm install
+```
 
-      if (existing.rows.length > 0 && existing.rows[0].status === 'active') {
-        // Compte déjà actif : on ne crée rien, on ne révèle rien de plus.
-        // On notifie discrètement par e-mail le titulaire du compte, qui
-        // saura qu'une tentative d'inscription a eu lieu sur son adresse.
-        await client.query('COMMIT');
-        return res.json(GENERIC_SIGNUP_RESPONSE);
-      }
+### 3. Configurer l'environnement
+Copiez le fichier `.env.example` en `.env` et renseignez les variables :
+```bash
+cp .env.example .env
+nano .env  # ou utilisez votre éditeur préféré
+```
 
-      if (existing.rows.length > 0 && existing.rows[0].status === 'pending') {
-        // Compte en attente de vérification : on régénère un token plutôt
-        // que de créer un doublon.
-        userId = existing.rows[0].id;
-      } else {
-        const passwordHash = await argon2.hash(password, { type: argon2.argon2id });
-        const insertResult = await client.query(
-          `INSERT INTO users (first_name, last_name, email, password_hash, status)
-           VALUES ($1, $2, $3, $4, 'pending') RETURNING id`,
-          [firstName.trim(), lastName.trim(), email, passwordHash]
-        );
-        userId = insertResult.rows[0].id;
-      }
+#### Variables d'environnement requises
+| Variable | Description | Exemple |
+|----------|-------------|---------|
+| `DATABASE_URL` | URL de connexion PostgreSQL | `postgresql://user:password@localhost:5432/nestor_c2` |
+| `SESSION_SECRET` | Clé secrète pour les sessions | `votre_clé_sécrète_ici` |
+| `ALLOWED_EMAIL_DOMAIN` | Domaine e-mail autorisé (séparés par des virgules) | `mon-entreprise.com` |
+| `ALLOWED_IP_RANGES` | Plages IP autorisées (format CIDR) | `10.0.0.0/8,192.168.0.0/16` |
+| `PUBLIC_BASE_URL` | URL publique du portail | `https://portail.mon-entreprise.com` |
+| `SMTP_HOST` | Hôte SMTP | `smtp.mon-entreprise.com` |
+| `SMTP_PORT` | Port SMTP | `587` |
+| `SMTP_USER` | Utilisateur SMTP | `portail@mon-entreprise.com` |
+| `SMTP_PASSWORD` | Mot de passe SMTP | `votre_mot_de_passe` |
+| `SMTP_SECURE` | Utiliser TLS (true/false) | `false` |
+| `USE_HTTPS` | Activer HTTPS (true/false) | `true` |
+| `TLS_KEY_PATH` | Chemin vers la clé TLS | `/etc/ssl/private/portail.key` |
+| `TLS_CERT_PATH` | Chemin vers le certificat TLS | `/etc/ssl/certs/portail.crt` |
+| `PGSSL` | Activer SSL pour PostgreSQL (true/false) | `true` |
 
-      const token = generateToken();
-      const tokenHash = hashToken(token);
-      const expiresAt = getExpiryDate(EMAIL_VERIFICATION_TTL_HOURS);
+### 4. Initialiser la base de données
+```bash
+# Appliquer le schéma
+npm run migrate
+```
 
-      await client.query(
-        `INSERT INTO email_verifications (user_id, token_hash, expires_at)
-         VALUES ($1, $2, $3)`,
-        [userId, tokenHash, expiresAt]
-      );
+### 5. Créer le premier compte administrateur
+```bash
+npm run create-admin prenom.nom@mon-entreprise.com "Prénom" "Nom"
+```
+> ⚠️ **Important** : Ce script vous demandera de saisir un mot de passe de manière interactive.
 
-      await client.query('COMMIT');
+### 6. Générer un certificat TLS (optionnel, pour HTTPS)
+```bash
+bash generate-self-signed-cert.sh
+```
+> Ce script génère un certificat auto-signé. Pour un environnement de production, utilisez un certificat valide (Let's Encrypt, etc.).
 
-      const verificationUrl = `${process.env.PUBLIC_BASE_URL}/verify-email?token=${token}`;
-      await sendVerificationEmail(email, verificationUrl);
+---
 
-      return res.json(GENERIC_SIGNUP_RESPONSE);
-    } catch (err) {
-      await client.query('ROLLBACK');
-      console.error('[auth/signup] Erreur :', err);
-      return res.status(500).json({ error: 'Une erreur est survenue, veuillez réessayer.' });
-    } finally {
-      client.release();
-    }
-  }
-);
+## 🏃 Démarrage
 
-// ---------------------------------------------------------------
-// GET /api/auth/verify-email?token=...
-// ---------------------------------------------------------------
-router.get('/verify-email', async (req, res) => {
-  const { token } = req.query;
-  if (!token) {
-    return res.status(400).json({ error: 'Token manquant.' });
-  }
+### Développement (HTTP)
+```bash
+npm run dev
+```
+> Le serveur démarrera sur `http://localhost:3000` (accès restreint aux IP locales).
 
-  const tokenHash = hashToken(String(token));
-  const client = await pool.connect();
-  try {
-    await client.query('BEGIN');
+### Production (HTTPS)
+```bash
+USE_HTTPS=true npm start
+```
+> Le serveur démarrera sur `https://localhost:3000` (ou le port spécifié dans `.env`).
 
-    const result = await client.query(
-      `SELECT id, user_id, expires_at, used_at FROM email_verifications WHERE token_hash = $1`,
-      [tokenHash]
-    );
+---
 
-    if (result.rows.length === 0) {
-      await client.query('ROLLBACK');
-      return res.status(400).json({ error: 'Lien de vérification invalide.' });
-    }
+## 📂 Structure du projet
 
-    const verification = result.rows[0];
+```
+Nestor-C2/
+├── db/
+│   ├── schema.sql          # Schéma PostgreSQL
+│   ├── pool.js             # Connexion à la base de données
+│   ├── migrate.js          # Script de migration
+│   └── create-admin.js     # Script de création de l'admin
+├── middleware/
+│   ├── requireAuth.js      # Vérifie la session utilisateur
+│   ├── requireRole.js      # Vérifie le rôle utilisateur
+│   └── restrictToLan.js    # Restreint l'accès au réseau interne
+├── routes/
+│   ├── auth.js             # Routes d'authentification
+│   ├── requests.js         # Routes de gestion des demandes
+│   └── admin.js            # Routes d'administration
+├── utils/
+│   ├── tokens.js           # Génération et hachage des tokens
+│   ├── mailer.js           # Envoi d'e-mails
+│   └── emailDomain.js      # Validation des domaines e-mail
+├── public/
+│   ├── index.html          # Page principale (à créer)
+│   ├── verify-email.html   # Page de vérification e-mail
+│   ├── reset-password.html # Page de réinitialisation
+│   └── setup-password.html # Page de configuration mot de passe
+├── .env.example            # Exemple de configuration
+├── .gitignore              # Fichiers à ignorer
+├── package.json            # Dépendances et scripts
+├── server.js               # Serveur Express principal
+└── README.md               # Ce fichier
+```
 
-    if (verification.used_at) {
-      await client.query('ROLLBACK');
-      return res.status(400).json({ error: 'Ce lien a déjà été utilisé.' });
-    }
+---
 
-    if (new Date(verification.expires_at) < new Date()) {
-      await client.query('ROLLBACK');
-      return res.status(400).json({
-        error: 'Ce lien a expiré. Vous pouvez demander un nouvel e-mail de vérification.',
-      });
-    }
+## 🔒 Sécurité
 
-    await client.query('UPDATE users SET status = $1, updated_at = now() WHERE id = $2', [
-      'active',
-      verification.user_id,
-    ]);
-    await client.query('UPDATE email_verifications SET used_at = now() WHERE id = $1', [
-      verification.id,
-    ]);
+### Bonnes pratiques appliquées
+- ❌ **Pas de mots de passe en clair** : Tous les mots de passe sont hachés avec **Argon2id** (résistant aux attaques par GPU).
+- ❌ **Pas de fuite d'informations** : Les messages d'erreur sont génériques pour éviter l'énumération de comptes.
+- ❌ **Tokens à usage unique** : Les liens de vérification et de réinitialisation expirent et ne peuvent être réutilisés.
+- ❌ **Restriction réseau** : L'accès est limité aux IP internes (configurable via `ALLOWED_IP_RANGES`).
+- ❌ **Sessions sécurisées** : Les cookies de session sont `httpOnly`, `secure` (en HTTPS) et `sameSite=lax`.
+- ❌ **Rate limiting** : Protection contre les attaques par force brute sur les routes d'authentification.
 
-    await client.query('COMMIT');
-    return res.json({ message: 'Votre compte a été activé avec succès.' });
-  } catch (err) {
-    await client.query('ROLLBACK');
-    console.error('[auth/verify-email] Erreur :', err);
-    return res.status(500).json({ error: 'Une erreur est survenue, veuillez réessayer.' });
-  } finally {
-    client.release();
-  }
-});
+### Recommandations supplémentaires
+1. **Ne pas exposer le serveur sur Internet** : Utilisez un réseau interne ou un VPN.
+2. **Utiliser HTTPS** : Même en interne, activez `USE_HTTPS=true` pour chiffrer le trafic.
+3. **Sauvegarder la base de données** : Effectuez des sauvegardes régulières de la base PostgreSQL.
+4. **Mettre à jour les dépendances** : Exécutez `npm audit` régulièrement.
+5. **Configurer un reverse proxy** (optionnel) : Pour ajouter une couche de sécurité supplémentaire (ex: Nginx avec fail2ban).
 
-// ---------------------------------------------------------------
-// POST /api/auth/login
-// ---------------------------------------------------------------
-router.post(
-  '/login',
-  [
-    body('email').trim().isEmail().withMessage('Adresse e-mail invalide.'),
-    body('password').notEmpty().withMessage('Mot de passe requis.'),
-  ],
-  async (req, res) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ error: errors.array()[0].msg });
-    }
+---
 
-    const email = req.body.email.trim().toLowerCase();
-    const { password } = req.body;
+## 📡 API Endpoints
 
-    // Message d'erreur volontairement identique que l'email n'existe pas,
-    // que le mot de passe soit faux, ou que le compte ne soit pas activé —
-    // afin de ne pas indiquer à un attaquant ce qui a échoué précisément.
-    const GENERIC_LOGIN_ERROR = { error: 'Adresse e-mail ou mot de passe incorrect.' };
+### Authentification
+| Méthode | Endpoint | Description |
+|---------|----------|-------------|
+| POST | `/api/auth/signup` | Inscription (auto-vérification par e-mail) |
+| GET | `/api/auth/verify-email?token=...` | Vérifier l'e-mail |
+| POST | `/api/auth/login` | Connexion |
+| POST | `/api/auth/logout` | Déconnexion |
+| POST | `/api/auth/forgot-password` | Demander une réinitialisation |
+| POST | `/api/auth/reset-password` | Réinitialiser le mot de passe |
+| POST | `/api/auth/setup-password` | Configurer le mot de passe (valideurs) |
+| GET | `/api/auth/me` | Vérifier la session active |
 
-    try {
-      const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
-      if (result.rows.length === 0) {
-        return res.status(401).json(GENERIC_LOGIN_ERROR);
-      }
+### Demandes
+| Méthode | Endpoint | Description |
+|---------|----------|-------------|
+| GET | `/api/requests` | Lister mes demandes |
+| POST | `/api/requests` | Créer une demande |
+| GET | `/api/requests/:id` | Détails d'une demande |
+| PUT | `/api/requests/:id` | Mettre à jour une demande |
+| DELETE | `/api/requests/:id` | Supprimer une demande (brouillon uniquement) |
 
-      const user = result.rows[0];
+### Administration (Admin uniquement)
+| Méthode | Endpoint | Description |
+|---------|----------|-------------|
+| GET | `/api/admin/validators` | Lister les valideurs |
+| POST | `/api/admin/validators` | Créer un valideur |
+| GET | `/api/admin/validators/:userId/categories` | Lister les catégories d'un valideur |
+| POST | `/api/admin/validators/:userId/categories` | Associer une catégorie |
+| DELETE | `/api/admin/validators/:userId/categories/:categoryKey` | Retirer une catégorie |
+| GET | `/api/admin/requests` | Lister toutes les demandes |
 
-      if (user.status !== 'active') {
-        return res.status(401).json({
-          error: "Ce compte n'est pas encore activé. Vérifiez votre boîte mail.",
-        });
-      }
+---
 
-      const passwordValid = await argon2.verify(user.password_hash, password);
-      if (!passwordValid) {
-        return res.status(401).json(GENERIC_LOGIN_ERROR);
-      }
+## 🛠️ Développement
 
-      // Connexion réussie : on crée la session, en y stockant le rôle pour
-      // que requireRole (voir middleware/requireRole.js) puisse vérifier
-      // les autorisations sans requête supplémentaire en base à chaque appel.
-      req.session.userId = user.id;
-      req.session.userEmail = user.email;
-      req.session.userRole = user.role;
+### Frontend
+Les pages statiques sont servies depuis le dossier `public/`. Vous pouvez utiliser n'importe quel framework (React, Vue, Svelte) ou du HTML/CSS/JS pur.
 
-      return res.json({
-        message: 'Connexion réussie.',
-        user: { firstName: user.first_name, lastName: user.last_name, email: user.email, role: user.role },
-      });
-    } catch (err) {
-      console.error('[auth/login] Erreur :', err);
-      return res.status(500).json({ error: 'Une erreur est survenue, veuillez réessayer.' });
-    }
-  }
-);
+#### Exemple de structure pour `public/index.html`
+```html
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Portail Services Internes</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div id="app"></div>
+  <script src="/app.js"></script>
+</body>
+</html>
+```
 
-// ---------------------------------------------------------------
-// POST /api/auth/logout
-// ---------------------------------------------------------------
-router.post('/logout', (req, res) => {
-  req.session.destroy((err) => {
-    if (err) {
-      console.error('[auth/logout] Erreur :', err);
-      return res.status(500).json({ error: 'Une erreur est survenue.' });
-    }
-    res.clearCookie('connect.sid');
-    return res.json({ message: 'Déconnexion réussie.' });
-  });
-});
+### Backend
+Le backend utilise **Express.js** avec une architecture modulaire :
+- **Routes** : Dans `routes/` (auth, requests, admin)
+- **Middleware** : Dans `middleware/` (authentification, rôles, restriction IP)
+- **Utilitaires** : Dans `utils/` (tokens, e-mails, validation)
+- **Base de données** : PostgreSQL avec `pg` (pool de connexions)
 
-// ---------------------------------------------------------------
-// POST /api/auth/forgot-password
-// ---------------------------------------------------------------
-router.post(
-  '/forgot-password',
-  [body('email').trim().isEmail().withMessage('Adresse e-mail invalide.')],
-  async (req, res) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ error: errors.array()[0].msg });
-    }
+---
 
-    const email = req.body.email.trim().toLowerCase();
+## 🐛 Dépannage
 
-    // Même principe anti-énumération que pour l'inscription : la réponse
-    // ne change jamais, que le compte existe ou non.
-    const GENERIC_RESPONSE = {
-      message: 'Si cette adresse correspond à un compte existant, un lien a été envoyé.',
-    };
+### Problèmes courants
 
-    try {
-      const result = await pool.query("SELECT id FROM users WHERE email = $1 AND status = 'active'", [
-        email,
-      ]);
+#### 1. Erreur de connexion à PostgreSQL
+```
+Error: Connection refused
+```
+**Solution** :
+- Vérifiez que PostgreSQL est en cours d'exécution (`sudo systemctl status postgresql`).
+- Vérifiez les informations de connexion dans `DATABASE_URL`.
+- Si vous utilisez SSL, assurez-vous que `PGSSL=true` est défini.
 
-      if (result.rows.length > 0) {
-        const userId = result.rows[0].id;
-        const token = generateToken();
-        const tokenHash = hashToken(token);
-        const expiresAt = getExpiryDate(PASSWORD_RESET_TTL_HOURS);
+#### 2. Erreur SMTP
+```
+Error: getaddrinfo ENOTFOUND
+```
+**Solution** :
+- Vérifiez `SMTP_HOST` et `SMTP_PORT` dans `.env`.
+- Testez la connexion SMTP avec `telnet` :
+  ```bash
+  telnet smtp.mon-entreprise.com 587
+  ```
 
-        await pool.query(
-          `INSERT INTO password_resets (user_id, token_hash, expires_at) VALUES ($1, $2, $3)`,
-          [userId, tokenHash, expiresAt]
-        );
+#### 3. Accès refusé (403)
+```
+Accès refusé : ce service est réservé au réseau interne.
+```
+**Solution** :
+- Vérifiez que votre IP est dans `ALLOWED_IP_RANGES`.
+- Si vous testez en local, ajoutez `127.0.0.1/32` à `ALLOWED_IP_RANGES`.
 
-        const resetUrl = `${process.env.PUBLIC_BASE_URL}/reset-password?token=${token}`;
-        await sendPasswordResetEmail(email, resetUrl);
-      }
+#### 4. Certificat TLS invalide
+```
+Error: unable to verify the first certificate
+```
+**Solution** :
+- Si vous utilisez un certificat auto-signé, assurez-vous que `USE_HTTPS=true` et que les chemins `TLS_KEY_PATH` et `TLS_CERT_PATH` sont corrects.
+- Pour ignorer les erreurs de certificat (développement uniquement), ajoutez `NODE_TLS_REJECT_UNAUTHORIZED=0` à `.env`.
 
-      return res.json(GENERIC_RESPONSE);
-    } catch (err) {
-      console.error('[auth/forgot-password] Erreur :', err);
-      return res.status(500).json({ error: 'Une erreur est survenue, veuillez réessayer.' });
-    }
-  }
-);
+---
 
-// ---------------------------------------------------------------
-// POST /api/auth/reset-password
-// ---------------------------------------------------------------
-router.post(
-  '/reset-password',
-  [
-    body('token').notEmpty().withMessage('Token manquant.'),
-    body('password').isLength({ min: 8 }).withMessage('Le mot de passe doit contenir au moins 8 caractères.'),
-  ],
-  async (req, res) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ error: errors.array()[0].msg });
-    }
+## 📜 Licence
 
-    const { token, password } = req.body;
-    const tokenHash = hashToken(token);
-
-    const client = await pool.connect();
-    try {
-      await client.query('BEGIN');
-
-      const result = await client.query(
-        `SELECT id, user_id, expires_at, used_at FROM password_resets WHERE token_hash = $1`,
-        [tokenHash]
-      );
-
-      if (result.rows.length === 0) {
-        await client.query('ROLLBACK');
-        return res.status(400).json({ error: 'Lien de réinitialisation invalide.' });
-      }
-
-      const reset = result.rows[0];
-
-      if (reset.used_at || new Date(reset.expires_at) < new Date()) {
-        await client.query('ROLLBACK');
-        return res.status(400).json({
-          error: 'Ce lien a expiré ou a déjà été utilisé. Veuillez refaire une demande.',
-        });
-      }
-
-      const passwordHash = await argon2.hash(password, { type: argon2.argon2id });
-      await client.query('UPDATE users SET password_hash = $1, updated_at = now() WHERE id = $2', [
-        passwordHash,
-        reset.user_id,
-      ]);
-      await client.query('UPDATE password_resets SET used_at = now() WHERE id = $1', [reset.id]);
-
-      await client.query('COMMIT');
-      return res.json({ message: 'Votre mot de passe a été modifié avec succès.' });
-    } catch (err) {
-      await client.query('ROLLBACK');
-      console.error('[auth/reset-password] Erreur :', err);
-      return res.status(500).json({ error: 'Une erreur est survenue, veuillez réessayer.' });
-    } finally {
-      client.release();
-    }
-  }
-);
-
-// ---------------------------------------------------------------
-// POST /api/auth/setup-password — utilisée par un compte valideur créé
-// par l'administrateur, pour définir son propre mot de passe à partir du
-// lien reçu par e-mail, avant sa première connexion. Distincte de
-// reset-password : ce token vient de password_setup_tokens, pas de
-// password_resets, et le compte est déjà actif (créé directement par
-// l'admin) plutôt qu'en attente de vérification.
-// ---------------------------------------------------------------
-router.post(
-  '/setup-password',
-  [
-    body('token').notEmpty().withMessage('Token manquant.'),
-    body('password').isLength({ min: 8 }).withMessage('Le mot de passe doit contenir au moins 8 caractères.'),
-  ],
-  async (req, res) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ error: errors.array()[0].msg });
-    }
-
-    const { token, password } = req.body;
-    const tokenHash = hashToken(token);
-
-    const client = await pool.connect();
-    try {
-      await client.query('BEGIN');
-
-      const result = await client.query(
-        `SELECT id, user_id, expires_at, used_at FROM password_setup_tokens WHERE token_hash = $1`,
-        [tokenHash]
-      );
-
-      if (result.rows.length === 0) {
-        await client.query('ROLLBACK');
-        return res.status(400).json({ error: 'Lien invalide.' });
-      }
-
-      const setupToken = result.rows[0];
-
-      if (setupToken.used_at || new Date(setupToken.expires_at) < new Date()) {
-        await client.query('ROLLBACK');
-        return res.status(400).json({
-          error: 'Ce lien a expiré ou a déjà été utilisé. Contactez votre administrateur pour un nouveau lien.',
-        });
-      }
-
-      const passwordHash = await argon2.hash(password, { type: argon2.argon2id });
-      await client.query('UPDATE users SET password_hash = $1, updated_at = now() WHERE id = $2', [
-        passwordHash,
-        setupToken.user_id,
-      ]);
-      await client.query('UPDATE password_setup_tokens SET used_at = now() WHERE id = $1', [setupToken.id]);
-
-      await client.query('COMMIT');
-      return res.json({ message: 'Votre mot de passe a été défini avec succès.' });
-    } catch (err) {
-      await client.query('ROLLBACK');
-      console.error('[auth/setup-password] Erreur :', err);
-      return res.status(500).json({ error: 'Une erreur est survenue, veuillez réessayer.' });
-    } finally {
-      client.release();
-    }
-  }
-);
-
-// ---------------------------------------------------------------
-// GET /api/auth/me  — savoir si une session est active (utile au chargement du front)
-// ---------------------------------------------------------------
-router.get('/me', (req, res) => {
-  if (!req.session || !req.session.userId) {
-    return res.status(401).json({ authenticated: false });
-  }
-  return res.json({ authenticated: true, email: req.session.userEmail, role: req.session.userRole });
-});
-
-module.exports = router;
+MIT © [sdellupo-dotcom](https://github.com/sdellupo-dotcom)

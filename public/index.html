@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Portail Services Internes — Nestor-C2</title>
+  <style>
+    :root {
+      --bg-primary: #ffffff;
+      --bg-secondary: #f4f3f8;
+      --border-tertiary: #e3e1ee;
+      --border-secondary: #cfcbe2;
+      --text-primary: #1f1b3d;
+      --text-secondary: #5c5775;
+      --text-tertiary: #918ca8;
+      --radius-md: 8px;
+      --radius-lg: 14px;
+      --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      --primary: #6b66f2;
+      --primary-hover: #5a56d4;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: var(--font-sans); color: var(--text-primary); background: var(--bg-secondary); }
+    
+    /* Header */
+    .header { background: #26215c; padding: 16px 32px; display: flex; justify-content: space-between; align-items: center; }
+    .header-title { font-size: 18px; font-weight: 600; color: white; }
+    .header-nav { display: flex; gap: 20px; }
+    .header-link { color: #cecbf6; text-decoration: none; font-size: 14px; transition: color 0.2s; }
+    .header-link:hover { color: white; }
+    
+    /* Main Content */
+    .main { padding: 32px; max-width: 1200px; margin: 0 auto; }
+    .hero { text-align: center; margin-bottom: 40px; }
+    .hero-title { font-size: 32px; font-weight: 700; color: var(--text-primary); margin-bottom: 8px; }
+    .hero-sub { font-size: 16px; color: var(--text-secondary); }
+    
+    /* Cards Grid */
+    .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 40px; }
+    .card { background: white; border-radius: var(--radius-lg); padding: 24px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05); }
+    .card-title { font-size: 18px; font-weight: 600; margin-bottom: 8px; color: var(--text-primary); }
+    .card-sub { font-size: 14px; color: var(--text-secondary); margin-bottom: 16px; }
+    .card-actions { display: flex; gap: 12px; }
+    
+    /* Buttons */
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 10px 16px; border: none; border-radius: var(--radius-md); font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.2s; text-decoration: none; }
+    .btn-primary { background: var(--primary); color: white; }
+    .btn-primary:hover { background: var(--primary-hover); }
+    .btn-secondary { background: white; color: var(--primary); border: 1px solid var(--border-secondary); }
+    .btn-secondary:hover { background: var(--bg-secondary); }
+    .btn-sm { padding: 8px 12px; font-size: 13px; }
+    
+    /* Forms */
+    .form-group { margin-bottom: 16px; }
+    .form-label { display: block; font-size: 14px; font-weight: 500; color: var(--text-primary); margin-bottom: 6px; }
+    .form-input { width: 100%; padding: 10px 12px; border: 1px solid var(--border-secondary); border-radius: var(--radius-md); font-size: 14px; transition: border-color 0.2s; }
+    .form-input:focus { outline: none; border-color: var(--primary); }
+    
+    /* Auth Section */
+    .auth-section { max-width: 400px; margin: 0 auto; }
+    .auth-tabs { display: flex; gap: 8px; margin-bottom: 20px; border-bottom: 1px solid var(--border-tertiary); }
+    .auth-tab { padding: 10px 0; cursor: pointer; border-bottom: 2px solid transparent; font-size: 15px; font-weight: 500; color: var(--text-secondary); }
+    .auth-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+    .auth-tab:hover { color: var(--text-primary); }
+    .auth-form { display: none; }
+    .auth-form.active { display: block; }
+    
+    /* Alerts */
+    .alert { padding: 12px 14px; border-radius: var(--radius-md); margin-bottom: 16px; font-size: 14px; display: none; }
+    .alert-error { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; display: block; }
+    .alert-success { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; display: block; }
+    
+    /* User Menu */
+    .user-menu { display: flex; align-items: center; gap: 12px; }
+    .user-info { display: flex; flex-direction: column; align-items: flex-end; }
+    .user-name { font-size: 14px; font-weight: 500; color: white; }
+    .user-role { font-size: 12px; color: #cecbf6; }
+    .user-avatar { width: 32px; height: 32px; background: #6b66f2; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; }
+    
+    /* Requests Table */
+    .table-container { overflow-x: auto; }
+    .table { width: 100%; border-collapse: collapse; }
+    .table th, .table td { padding: 12px 16px; text-align: left; border-bottom: 1px solid var(--border-tertiary); }
+    .table th { font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; }
+    .table td { font-size: 14px; color: var(--text-primary); }
+    .table tr:hover { background: var(--bg-secondary); }
+    .status-badge { display: inline-block; padding: 4px 8px; border-radius: 20px; font-size: 12px; font-weight: 500; }
+    .status-brouillon { background: #fef3c7; color: #92400e; }
+    .status-en_cours { background: #dbeafe; color: #1e40af; }
+    .status-traitee { background: #d1fae5; color: #065f46; }
+    .status-annulee, .status-rejetee { background: #fee2e2; color: #991b1b; }
+    
+    /* Footer */
+    .footer { text-align: center; padding: 20px; color: var(--text-tertiary); font-size: 13px; }
+    
+    /* Responsive */
+    @media (max-width: 768px) {
+      .header { padding: 12px 16px; }
+      .header-title { font-size: 16px; }
+      .header-nav { display: none; }
+      .main { padding: 16px; }
+      .hero-title { font-size: 24px; }
+      .cards { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <header class="header">
+    <div class="header-title">Portail Services Internes</div>
+    <div class="header-nav" id="headerNav">
+      <a href="/" class="header-link">Accueil</a>
+      <a href="#requests" class="header-link">Mes demandes</a>
+      <a href="#new" class="header-link">Nouvelle demande</a>
+    </div>
+    <div class="user-menu" id="userMenu">
+      <div class="user-info" id="userInfo" style="display: none;">
+        <span class="user-name" id="userName"></span>
+        <span class="user-role" id="userRole"></span>
+      </div>
+      <div class="user-avatar" id="userAvatar" style="display: none;">A</div>
+      <a href="#" class="header-link" id="loginLink">Se connecter</a>
+      <a href="#" class="header-link" id="logoutLink" style="display: none;">Déconnexion</a>
+    </div>
+  </header>
+
+  <main class="main">
+    <!-- Section Héro -->
+    <section class="hero" id="heroSection">
+      <h1 class="hero-title">Bienvenue sur le Portail Services Internes</h1>
+      <p class="hero-sub">Gérez vos demandes d'arrivées/départs, fournitures, et plus encore.</p>
+    </section>
+
+    <!-- Section Authentification (si non connecté) -->
+    <section class="auth-section" id="authSection">
+      <div class="cards">
+        <div class="card">
+          <div class="auth-tabs">
+            <div class="auth-tab active" data-tab="login">Connexion</div>
+            <div class="auth-tab" data-tab="signup">Inscription</div>
+          </div>
+          
+          <!-- Formulaire de connexion -->
+          <form class="auth-form active" id="loginForm">
+            <div id="loginMessage" class="alert"></div>
+            <div class="form-group">
+              <label class="form-label" for="loginEmail">Adresse e-mail</label>
+              <input type="email" id="loginEmail" class="form-input" placeholder="votre@entreprise.com" required />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="loginPassword">Mot de passe</label>
+              <input type="password" id="loginPassword" class="form-input" placeholder="Votre mot de passe" required />
+            </div>
+            <button type="submit" class="btn btn-primary" style="width: 100%;">Se connecter</button>
+            <div style="margin-top: 12px; text-align: center;">
+              <a href="#" class="link" id="forgotPasswordLink">Mot de passe oublié ?</a>
+            </div>
+          </form>
+          
+          <!-- Formulaire d'inscription -->
+          <form class="auth-form" id="signupForm">
+            <div id="signupMessage" class="alert"></div>
+            <div class="form-group">
+              <label class="form-label" for="signupFirstName">Prénom</label>
+              <input type="text" id="signupFirstName" class="form-input" placeholder="Votre prénom" required />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="signupLastName">Nom</label>
+              <input type="text" id="signupLastName" class="form-input" placeholder="Votre nom" required />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="signupEmail">Adresse e-mail</label>
+              <input type="email" id="signupEmail" class="form-input" placeholder="votre@entreprise.com" required />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="signupPassword">Mot de passe</label>
+              <input type="password" id="signupPassword" class="form-input" placeholder="Au moins 8 caractères" required minlength="8" />
+            </div>
+            <button type="submit" class="btn btn-primary" style="width: 100%;">S'inscrire</button>
+            <div style="margin-top: 12px; text-align: center; font-size: 13px; color: var(--text-secondary);">
+              Un e-mail de vérification vous sera envoyé.
+            </div>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section Demandes (si connecté) -->
+    <section id="requestsSection" style="display: none;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h2 style="font-size: 20px; font-weight: 600;">Mes demandes</h2>
+        <a href="#new" class="btn btn-primary btn-sm">Nouvelle demande</a>
+      </div>
+      
+      <div class="table-container">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Référence</th>
+              <th>Titre</th>
+              <th>Catégorie</th>
+              <th>Statut</th>
+              <th>Date</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="requestsTableBody">
+            <tr>
+              <td colspan="6" style="text-align: center; color: var(--text-tertiary);">
+                Aucune demande trouvée.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Section Nouvelle Demande -->
+    <section id="newRequestSection" style="display: none;">
+      <div class="cards">
+        <div class="card">
+          <div class="card-title">Nouvelle demande</div>
+          <div class="card-sub">Sélectionnez une catégorie pour commencer.</div>
+          <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px;">
+            <button class="btn btn-secondary" data-category="arrivee-depart">Arrivée/Départ</button>
+            <button class="btn btn-secondary" data-category="fournitures">Fournitures</button>
+            <button class="btn btn-secondary" data-category="technique">Support Technique</button>
+            <button class="btn btn-secondary" data-category="autre">Autre</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    &copy; 2024 Portail Services Internes — Nestor-C2
+  </footer>
+
+  <script>
+    // État de l'application
+    let currentUser = null;
+    
+    // DOM Elements
+    const heroSection = document.getElementById('heroSection');
+    const authSection = document.getElementById('authSection');
+    const requestsSection = document.getElementById('requestsSection');
+    const newRequestSection = document.getElementById('newRequestSection');
+    const userInfo = document.getElementById('userInfo');
+    const userAvatar = document.getElementById('userAvatar');
+    const userName = document.getElementById('userName');
+    const userRole = document.getElementById('userRole');
+    const loginLink = document.getElementById('loginLink');
+    const logoutLink = document.getElementById('logoutLink');
+    const headerNav = document.getElementById('headerNav');
+    
+    // Auth Tabs
+    const authTabs = document.querySelectorAll('.auth-tab');
+    const authForms = document.querySelectorAll('.auth-form');
+    
+    // Vérifier la session au chargement
+    async function checkSession() {
+      try {
+        const response = await fetch('/api/auth/me');
+        const data = await response.json();
+        
+        if (data.authenticated) {
+          currentUser = data;
+          showAuthenticatedUI();
+          loadRequests();
+        } else {
+          showUnauthenticatedUI();
+        }
+      } catch (err) {
+        console.error('Erreur lors de la vérification de la session:', err);
+        showUnauthenticatedUI();
+      }
+    }
+    
+    function showAuthenticatedUI() {
+      // Masquer l'héro et l'auth
+      heroSection.style.display = 'none';
+      authSection.style.display = 'none';
+      
+      // Afficher les sections connectées
+      requestsSection.style.display = 'block';
+      newRequestSection.style.display = 'block';
+      
+      // Mettre à jour le menu utilisateur
+      userInfo.style.display = 'flex';
+      userAvatar.style.display = 'flex';
+      userName.textContent = `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim() || currentUser.email;
+      userRole.textContent = currentUser.role ? `(${currentUser.role})` : '';
+      
+      if (userName.textContent) {
+        userAvatar.textContent = userName.textContent.charAt(0).toUpperCase();
+      }
+      
+      loginLink.style.display = 'none';
+      logoutLink.style.display = 'block';
+      headerNav.style.display = 'flex';
+    }
+    
+    function showUnauthenticatedUI() {
+      // Afficher l'héro et l'auth
+      heroSection.style.display = 'block';
+      authSection.style.display = 'block';
+      
+      // Masquer les sections connectées
+      requestsSection.style.display = 'none';
+      newRequestSection.style.display = 'none';
+      
+      // Mettre à jour le menu utilisateur
+      userInfo.style.display = 'none';
+      userAvatar.style.display = 'none';
+      loginLink.style.display = 'block';
+      logoutLink.style.display = 'none';
+      headerNav.style.display = 'none';
+    }
+    
+    // Charger les demandes
+    async function loadRequests() {
+      try {
+        const response = await fetch('/api/requests');
+        const data = await response.json();
+        
+        const tbody = document.getElementById('requestsTableBody');
+        
+        if (data.requests && data.requests.length > 0) {
+          tbody.innerHTML = data.requests
+            .map(
+              (request) => `
+                <tr>
+                  <td>${request.reference || '—'}</td>
+                  <td>${request.title || '—'}</td>
+                  <td>${request.category_key || '—'}</td>
+                  <td><span class="status-badge status-${request.status}">${request.status}</span></td>
+                  <td>${new Date(request.created_at).toLocaleDateString('fr-FR')}</td>
+                  <td><a href="#" class="link">Voir</a></td>
+                </tr>
+              `
+            )
+            .join('');
+        } else {
+          tbody.innerHTML = `
+            <tr>
+              <td colspan="6" style="text-align: center; color: var(--text-tertiary);">
+                Aucune demande trouvée.
+              </td>
+            </tr>
+          `;
+        }
+      } catch (err) {
+        console.error('Erreur lors du chargement des demandes:', err);
+      }
+    }
+    
+    // Gestion des onglets d'authentification
+    authTabs.forEach((tab) => {
+      tab.addEventListener('click', () => {
+        authTabs.forEach((t) => t.classList.remove('active'));
+        authForms.forEach((f) => f.classList.remove('active'));
+        
+        tab.classList.add('active');
+        document.getElementById(tab.dataset.tab + 'Form').classList.add('active');
+      });
+    });
+    
+    // Connexion
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const email = document.getElementById('loginEmail').value;
+      const password = document.getElementById('loginPassword').value;
+      const messageEl = document.getElementById('loginMessage');
+      
+      try {
+        const response = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password }),
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+          throw new Error(data.error || 'Erreur de connexion.');
+        }
+        
+        // Recharger la page pour mettre à jour l'UI
+        window.location.reload();
+      } catch (err) {
+        messageEl.textContent = err.message;
+        messageEl.className = 'alert alert-error';
+      }
+    });
+    
+    // Inscription
+    document.getElementById('signupForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const firstName = document.getElementById('signupFirstName').value;
+      const lastName = document.getElementById('signupLastName').value;
+      const email = document.getElementById('signupEmail').value;
+      const password = document.getElementById('signupPassword').value;
+      const messageEl = document.getElementById('signupMessage');
+      
+      try {
+        const response = await fetch('/api/auth/signup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ firstName, lastName, email, password }),
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+          throw new Error(data.error || 'Erreur lors de l\'inscription.');
+        }
+        
+        messageEl.textContent = data.message || 'Un e-mail de vérification vous a été envoyé.';
+        messageEl.className = 'alert alert-success';
+        
+        // Basculer vers l'onglet de connexion
+        setTimeout(() => {
+          document.querySelector('.auth-tab[data-tab="login"]').click();
+        }, 2000);
+      } catch (err) {
+        messageEl.textContent = err.message;
+        messageEl.className = 'alert alert-error';
+      }
+    });
+    
+    // Déconnexion
+    logoutLink.addEventListener('click', async (e) => {
+      e.preventDefault();
+      
+      try {
+        await fetch('/api/auth/logout', { method: 'POST' });
+        currentUser = null;
+        showUnauthenticatedUI();
+      } catch (err) {
+        console.error('Erreur lors de la déconnexion:', err);
+      }
+    });
+    
+    // Mot de passe oublié
+    document.getElementById('forgotPasswordLink').addEventListener('click', async (e) => {
+      e.preventDefault();
+      
+      const email = prompt('Veuillez entrer votre adresse e-mail :');
+      if (!email) return;
+      
+      try {
+        const response = await fetch('/api/auth/forgot-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email }),
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+          throw new Error(data.error || 'Erreur lors de la demande.');
+        }
+        
+        alert(data.message || 'Si cette adresse correspond à un compte existant, un lien a été envoyé.');
+      } catch (err) {
+        alert(err.message);
+      }
+    });
+    
+    // Sélection de catégorie pour nouvelle demande
+    document.querySelectorAll('[data-category]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const category = btn.dataset.category;
+        alert(`Formulaire pour la catégorie: ${category}\n\nCette fonctionnalité sera implémentée prochainement.`);
+      });
+    });
+    
+    // Initialiser l'application
+    checkSession();
+  </script>
+</body>
+</html>
