@@ -1,28 +1,23 @@
-<script>
-/* ===================== Navigation entre écrans de démo ===================== */
-function showScreen(name, btn){
-  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  document.getElementById('screen-' + name).classList.add('active');
-  document.querySelectorAll('.demo-btn').forEach(b => b.classList.remove('active'));
-  if(btn) btn.classList.add('active');
-}
+// =============================================================================
+// Portail Services Internes - Logique Frontend
+// Version nettoyée et adaptée pour le backend Node.js
+// =============================================================================
 
-// Bascule entre les deux onglets de la page Accueil : "Accueil" et "Suivre mes demandes"
-function showAccueilTab(tab){
-  document.getElementById('tab-accueil').classList.toggle('active', tab === 'accueil');
-  document.getElementById('tab-suivi').classList.toggle('active', tab === 'suivi');
-  document.getElementById('accueil-tab-view').style.display = tab === 'accueil' ? 'block' : 'none';
-  document.getElementById('suivi-tab-view').style.display = tab === 'suivi' ? 'block' : 'none';
-  if(tab === 'suivi') renderSuiviLists();
-}
+// -----------------------------------------------------------------------------
+// État global
+// -----------------------------------------------------------------------------
+let currentUser = null;
+let currentCategoryKey = null;
+let currentFormKey = null;
+let currentStep = 1;
+let formData = {};
+let submittedRequests = [];
 
-/* ===================== ACCUEIL : métadonnées visuelles des catégories =====================
-   Les formulaires eux-mêmes sont définis une seule fois, plus bas, dans categoryForms.
-   Ici on ne décrit que l'apparence (icône, couleurs) et la clé qui relie les deux. */
-/* ===================== ICONES SVG INLINE =====================
-   Pour éviter toute dépendance à un CDN externe (qui peut être bloqué par un
-   pare-feu d'entreprise ou indisponible hors-ligne), les icônes sont ici de
-   simples SVG dessinés à la main, intégrés directement dans le fichier. */
+// -----------------------------------------------------------------------------
+// Données statiques (icônes, catégories, formulaires)
+// -----------------------------------------------------------------------------
+
+// Icônes SVG
 const svgIcons = {
   walk: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13" cy="4" r="1.5" fill="currentColor" stroke="none"/><path d="M10.5 21l1.5-5.5-2-1.5.5-4.5 4 1 2 3.5"/><path d="M11 10l-3 1.5L6 14"/><path d="M14 11l2 2 3-1"/></svg>',
   package: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8l9-5 9 5-9 5-9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg>',
@@ -35,7 +30,6 @@ const svgIcons = {
   car: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16V12l2-4h12l2 4v4"/><path d="M4 16h16"/><circle cx="7.5" cy="16.5" r="1.5"/><circle cx="16.5" cy="16.5" r="1.5"/></svg>',
   confetti: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l3 7 3-3-2-7z"/><circle cx="17" cy="6" r="1.2" fill="currentColor" stroke="none"/><circle cx="20" cy="11" r="1" fill="currentColor" stroke="none"/><path d="M13 8l4-4M16 13l3-1"/></svg>',
   palette: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 7 0 100 14c1 0 1.5-.7 1.5-1.5S13 14 13 13a2 2 0 012-2h2a3 3 0 003-3c0-3-3.5-5-8-5z"/><circle cx="8" cy="10" r="1" fill="currentColor" stroke="none"/><circle cx="8" cy="14" r="1" fill="currentColor" stroke="none"/><circle cx="12" cy="8" r="1" fill="currentColor" stroke="none"/></svg>',
-  // Icônes additionnelles utilisées dans les menus de formulaires (par catégorie)
   doorEnter: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3h4v18h-4"/><path d="M3 12h11M11 8l3 4-3 4"/></svg>',
   doorExit: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3H6v18h4"/><path d="M21 12H10M13 8l-4 4 4 4"/></svg>',
   tag: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l8-8h5v5l-8 8z"/><circle cx="13" cy="6" r="1" fill="currentColor" stroke="none"/><path d="M3 11l7 7"/></svg>',
@@ -51,7 +45,7 @@ const svgIcons = {
   stairs: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20v-4h4v-4h4v-4h4V4h4"/></svg>',
   clock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
   badgeOff: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 9l6 6M15 9l-6 6"/></svg>',
-  key: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="4"/><path d="M11 11l9 9M17 14l3-3M14 17l2.5-2.5"/></svg>',
+  key: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="3.5"/><path d="M11 11l9 9M17 14l3-3M14 17l2.5-2.5"/></svg>',
   userPlus: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M3 20c0-3.5 2.7-6 6-6s6 2.5 6 6"/><path d="M18 8v5M15.5 10.5h5"/></svg>',
   shieldLock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v6c0 5-3 7.5-7 9-4-1.5-7-4-7-9V6z"/><rect x="9.5" y="11" width="5" height="4" rx="0.5"/><path d="M12 11V9.5"/></svg>',
   truckDelivery: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="9" width="10" height="7" rx="1"/><path d="M12 12h4l3 2v2h-7z"/><circle cx="6" cy="18" r="1.3"/><circle cx="16" cy="18" r="1.3"/></svg>',
@@ -79,12 +73,13 @@ const svgIcons = {
   infoCircle: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v.5M12 11v5"/></svg>'
 };
 
-// Génère le markup d'une icône SVG (remplace les anciennes classes "ti ti-*" liées au CDN)
-function icon(name, extraStyle){
+// Génère le markup d'une icône SVG
+function icon(name, extraStyle) {
   const svg = svgIcons[name] || svgIcons.fileText;
-  return `<span class="svg-icon" style="${extraStyle||''}">${svg}</span>`;
+  return `<span class="svg-icon" style="${extraStyle || ''}">${svg}</span>`;
 }
 
+// Métadonnées des catégories
 const categoryMeta = [
   { key: 'arrivee-depart', icon: 'walk', bg: '#9FE1CB', fg: '#085041' },
   { key: 'fournitures', icon: 'package', bg: '#F5C4B3', fg: '#712B13' },
@@ -96,162 +91,8 @@ const categoryMeta = [
   { key: 'equipements-bureau', icon: 'desk', bg: '#5DCAA5', fg: '#04342C' },
   { key: 'vehicule', icon: 'car', bg: '#AFA9EC', fg: '#26215C' },
   { key: 'evenementiel', icon: 'confetti', bg: '#ED93B1', fg: '#4B1528' },
-  { key: 'oeuvres-art', icon: 'palette', bg: '#97C459', fg: '#173404' },
+  { key: 'oeuvres-art', icon: 'palette', bg: '#97C459', fg: '#173404' }
 ];
-
-function renderCategories(filterText){
-  const grid = document.getElementById('cat-grid');
-  const noResults = document.getElementById('no-results');
-  const q = (filterText||'').trim().toLowerCase();
-  let visibleCount = 0;
-  let html = '';
-  categoryMeta.forEach((meta) => {
-    const cat = categoryForms[meta.key];
-    const allFormKeys = Object.keys(cat.forms);
-    let matchingKeys = allFormKeys;
-    let catMatches = true;
-    if (q) {
-      const catNameMatch = cat.title.toLowerCase().includes(q);
-      matchingKeys = allFormKeys.filter(k => cat.forms[k].title.toLowerCase().includes(q));
-      catMatches = catNameMatch || matchingKeys.length > 0;
-      if (catNameMatch) matchingKeys = allFormKeys;
-    }
-    if (!catMatches) return;
-    visibleCount++;
-    const isOpen = q && matchingKeys.length > 0;
-    html += `<div class="cat-card ${isOpen ? 'open' : ''}" id="cat-${meta.key}">
-      <div class="cat-header" onclick="toggleCat('${meta.key}')">
-        <div class="cat-header-left">
-          <div class="cat-icon" style="background:${meta.bg};color:${meta.fg};">${icon(meta.icon)}</div>
-          <div class="cat-name">${cat.title}</div>
-        </div>
-        <span class="svg-icon chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span>
-      </div>
-      <div class="cat-body">
-        ${matchingKeys.map(k => {
-          const f = cat.forms[k];
-          return `<div class="form-item" onclick="event.stopPropagation(); handleFormClick('${meta.key}', '${k}')">
-            <span>${f.title}</span>
-            <span class="form-item-steps">${f.steps.length} étape${f.steps.length>1?'s':''}</span>
-          </div>`;
-        }).join('')}
-      </div>
-    </div>`;
-  });
-  grid.innerHTML = html;
-  grid.style.display = visibleCount === 0 ? 'none' : 'grid';
-  noResults.style.display = visibleCount === 0 ? 'block' : 'none';
-}
-
-function toggleCat(key){
-  document.getElementById('cat-'+key).classList.toggle('open');
-}
-
-function filterCategories(){
-  renderCategories(document.getElementById('search-input').value);
-}
-
-function handleFormClick(catKey, formKey){
-  if(categoryForms[catKey] && categoryForms[catKey].forms[formKey]){
-    openCategoryScreen(catKey, formKey);
-  } else {
-    alert('Ce formulaire n\'est pas encore construit dans cette démo.');
-  }
-}
-
-/* ===================== CONNEXION ===================== */
-const ALLOWED_DOMAINS = ['mon-domaine.com'];
-const SIMULATED_USERS = {
-  'existant@mon-domaine.com': { status: 'active' },
-  'attente@mon-domaine.com': { status: 'pending' }
-};
-
-function showLoginView(name){
-  document.querySelectorAll('.login-view').forEach(v => v.classList.remove('active'));
-  document.getElementById('view-'+name).classList.add('active');
-}
-
-function isValidEmailFormat(v){
-  const parts = v.trim().split('@');
-  return parts.length === 2 && /^[^\s@]+$/.test(parts[0]) && /^[^\s@]+\.[^\s@]+$/.test(parts[1]);
-}
-function getDomain(email){ return email.trim().toLowerCase().split('@')[1] || ''; }
-function isAllowedDomain(email){ return ALLOWED_DOMAINS.includes(getDomain(email)); }
-
-function checkDomain(){
-  const email = document.getElementById('su-email').value.trim();
-  const feedback = document.getElementById('domain-feedback');
-  if(!email || !isValidEmailFormat(email)){ feedback.innerHTML = ''; return; }
-  if(isAllowedDomain(email)){
-    feedback.innerHTML = '<span class="domain-badge domain-ok">' + icon('check') + 'Domaine autorisé</span>';
-  } else {
-    feedback.innerHTML = '<span class="domain-badge domain-bad">' + icon('x') + 'Domaine non autorisé</span>';
-  }
-}
-
-function checkStrength(){
-  const v = document.getElementById('su-pass').value;
-  const segs = [document.getElementById('seg-1'), document.getElementById('seg-2'), document.getElementById('seg-3')];
-  segs.forEach(s => s.className = 'strength-seg');
-  let score = 0;
-  if(v.length >= 8) score++;
-  if(/[A-Z]/.test(v) && /[0-9]/.test(v)) score++;
-  if(v.length >= 12 && /[^A-Za-z0-9]/.test(v)) score++;
-  const cls = score <= 1 ? 'on-weak' : score === 2 ? 'on-mid' : 'on-strong';
-  for(let i = 0; i < Math.max(score,1) && i < 3; i++){ segs[i].classList.add(cls); }
-}
-
-function trySubmitLoginReal(){
-  const email = document.getElementById('login-email').value.trim();
-  const pass = document.getElementById('login-pass').value;
-  const errEmail = document.getElementById('err-login-email');
-  const errPass = document.getElementById('err-login-pass');
-  let ok = true;
-  if(!isValidEmailFormat(email)){ errEmail.style.display='block'; ok=false; } else { errEmail.style.display='none'; }
-  if(!pass){ errPass.style.display='block'; ok=false; } else { errPass.style.display='none'; }
-  if(ok){ alert('Connexion simulée réussie (démo). Dans la vraie application, l\'agent serait redirigé vers l\'Accueil.'); }
-}
-
-function trySubmitForgot(){
-  const email = document.getElementById('forgot-email').value.trim();
-  const err = document.getElementById('err-forgot-email');
-  if(!isValidEmailFormat(email)){ err.style.display='block'; return; }
-  err.style.display='none';
-  showLoginView('forgot-success');
-}
-
-function handleSignupRequest(email){
-  if(!isValidEmailFormat(email)) return { ok: false, reason: 'invalid_format' };
-  if(!isAllowedDomain(email)) return { ok: false, reason: 'domain_not_allowed' };
-  const key = email.trim().toLowerCase();
-  const existing = SIMULATED_USERS[key];
-  if(existing && existing.status === 'active') return { ok: true, branch: 'already_active' };
-  if(existing && existing.status === 'pending') return { ok: true, branch: 'pending_resend' };
-  return { ok: true, branch: 'new_account' };
-}
-
-function trySubmitSignup(){
-  const firstname = document.getElementById('su-firstname').value.trim();
-  const lastname = document.getElementById('su-lastname').value.trim();
-  const email = document.getElementById('su-email').value.trim();
-  const pass = document.getElementById('su-pass').value;
-  const pass2 = document.getElementById('su-pass2').value;
-  const errEmail = document.getElementById('err-su-email');
-  const errPass = document.getElementById('err-su-pass');
-  const errPass2 = document.getElementById('err-su-pass2');
-  let ok = true;
-  if(!isValidEmailFormat(email)){ errEmail.style.display='block'; ok=false; } else { errEmail.style.display='none'; }
-  if(pass.length < 8){ errPass.style.display='block'; ok=false; } else { errPass.style.display='none'; }
-  if(pass !== pass2 || !pass2){ errPass2.style.display='block'; ok=false; } else { errPass2.style.display='none'; }
-  if(!firstname || !lastname) ok = false;
-  if(!ok) return;
-  const result = handleSignupRequest(email);
-  if(!result.ok && result.reason === 'domain_not_allowed'){ showLoginView('domain-rejected'); return; }
-  if(!result.ok){ errEmail.style.display = 'block'; return; }
-  showLoginView('verify');
-}
-
-/* ===================== DONNEES : catégories + formulaires ===================== */
 const categoryForms = {
   'arrivee-depart': {
     title: 'Arrivée/Départ',
@@ -708,3 +549,762 @@ function renderSuiviCard(r){
   </div>`;
 }
 </script>
+</body>
+</html>
+
+// Données des demandes d'exemple
+const sampleRequests = [
+  { ref: 'ARR-2026-2210', title: "Arrivée d'un nouvel agent", category: 'Arrivée/Départ', date: '12/06/2026', status: 'en_cours' },
+  { ref: 'FCO-2026-1187', title: 'Fournitures courantes', category: 'Fournitures', date: '03/06/2026', status: 'traitee' },
+  { ref: 'PBA-2026-0934', title: 'Déclaration de perte du badge', category: 'Accès aux sites', date: '28/05/2026', status: 'rejetee' },
+  { ref: 'VEH-2026-0712', title: 'Réservation de véhicule seul', category: 'Véhicule', date: '20/05/2026', status: 'annulee' }
+];
+
+// Étiquettes de statut
+const statusLabels = {
+  brouillon: { label: 'Brouillon', cls: 'status-brouillon' },
+  en_cours: { label: 'En cours de traitement', cls: 'status-encours' },
+  traitee: { label: 'Traitée', cls: 'status-traitee' },
+  annulee: { label: 'Annulée', cls: 'status-annulee' },
+  rejetee: { label: 'Rejetée', cls: 'status-rejetee' }
+};
+
+// -----------------------------------------------------------------------------
+// Fonctions utilitaires
+// -----------------------------------------------------------------------------
+
+// Vérifier le format de l'e-mail
+function isValidEmailFormat(v) {
+  const parts = v.trim().split('@');
+  return parts.length === 2 && /^[^\s@]+$/.test(parts[0]) && /^[^\s@]+\.[^\s@]+$/.test(parts[1]);
+}
+
+// Obtenir le domaine de l'e-mail
+function getDomain(email) {
+  return email.trim().toLowerCase().split('@')[1] || '';
+}
+
+// Vérifier si le domaine est autorisé (récupéré depuis .env)
+function isAllowedDomain(email) {
+  const allowedDomains = (window.ALLOWED_EMAIL_DOMAIN || '').split(',').map(d => d.trim().toLowerCase()).filter(Boolean);
+  return allowedDomains.includes(getDomain(email));
+}
+
+// Vérifier la force du mot de passe
+function checkStrength() {
+  const v = document.getElementById('su-pass').value;
+  const segs = [
+    document.getElementById('seg-1'),
+    document.getElementById('seg-2'),
+    document.getElementById('seg-3')
+  ];
+  segs.forEach(s => s.className = 'strength-seg');
+  
+  let score = 0;
+  if (v.length >= 8) score++;
+  if (/[A-Z]/.test(v) && /[0-9]/.test(v)) score++;
+  if (v.length >= 12 && /[^A-Za-z0-9]/.test(v)) score++;
+  
+  const cls = score <= 1 ? 'on-weak' : score === 2 ? 'on-mid' : 'on-strong';
+  for (let i = 0; i < Math.max(score, 1) && i < 3; i++) {
+    segs[i].classList.add(cls);
+  }
+}
+
+// Vérifier le domaine de l'e-mail (affichage)
+function checkDomain() {
+  const email = document.getElementById('su-email').value.trim();
+  const feedback = document.getElementById('domain-feedback');
+  
+  if (!email || !isValidEmailFormat(email)) {
+    feedback.innerHTML = '';
+    return;
+  }
+  
+  if (isAllowedDomain(email)) {
+    feedback.innerHTML = '<span class="domain-badge domain-ok">' + icon('check') + 'Domaine autorisé</span>';
+  } else {
+    feedback.innerHTML = '<span class="domain-badge domain-bad">' + icon('x') + 'Domaine non autorisé</span>';
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Authentification
+// -----------------------------------------------------------------------------
+
+// Vérifier l'authentification au chargement
+async function checkAuth() {
+  try {
+    const response = await fetch('/api/auth/me');
+    const data = await response.json();
+    
+    if (data.authenticated) {
+      currentUser = data;
+      showAuthenticatedUI();
+      renderSuiviLists();
+    } else {
+      showUnauthenticatedUI();
+    }
+  } catch (err) {
+    console.error('Erreur auth:', err);
+    showUnauthenticatedUI();
+  }
+}
+
+// Afficher l'UI connectée
+function showAuthenticatedUI() {
+  document.getElementById('screen-connexion').style.display = 'none';
+  document.getElementById('screen-accueil').style.display = 'block';
+}
+
+// Afficher l'UI non connectée
+function showUnauthenticatedUI() {
+  document.getElementById('screen-connexion').style.display = 'block';
+  document.getElementById('screen-accueil').style.display = 'none';
+}
+
+// Connexion
+async function trySubmitLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const pass = document.getElementById('login-pass').value;
+  const errEmail = document.getElementById('err-login-email');
+  const errPass = document.getElementById('err-login-pass');
+  
+  let ok = true;
+  if (!email || !isValidEmailFormat(email)) {
+    errEmail.style.display = 'block';
+    ok = false;
+  } else {
+    errEmail.style.display = 'none';
+  }
+  if (!pass) {
+    errPass.style.display = 'block';
+    ok = false;
+  } else {
+    errPass.style.display = 'none';
+  }
+  
+  if (!ok) return;
+  
+  try {
+    const response = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password: pass }),
+    });
+    
+    const data = await response.json();
+    
+    if (response.ok) {
+      currentUser = data.user;
+      showAuthenticatedUI();
+      renderSuiviLists();
+    } else {
+      alert(data.error || 'Erreur de connexion.');
+    }
+  } catch (err) {
+    console.error('Erreur:', err);
+    alert('Erreur de connexion. Vérifiez votre connexion Internet.');
+  }
+}
+
+// Mot de passe oublié
+async function trySubmitForgot() {
+  const email = document.getElementById('forgot-email').value.trim();
+  const err = document.getElementById('err-forgot-email');
+  
+  if (!email || !isValidEmailFormat(email)) {
+    err.style.display = 'block';
+    return;
+  }
+  err.style.display = 'none';
+  
+  try {
+    const response = await fetch('/api/auth/forgot-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    });
+    
+    const data = await response.json();
+    
+    if (response.ok) {
+      showLoginView('forgot-success');
+    } else {
+      alert(data.error || 'Erreur.');
+    }
+  } catch (err) {
+    console.error('Erreur:', err);
+    alert('Erreur. Vérifiez votre connexion Internet.');
+  }
+}
+
+// Inscription
+async function trySubmitSignup() {
+  const firstname = document.getElementById('su-firstname').value.trim();
+  const lastname = document.getElementById('su-lastname').value.trim();
+  const email = document.getElementById('su-email').value.trim();
+  const pass = document.getElementById('su-pass').value;
+  const pass2 = document.getElementById('su-pass2').value;
+  const errEmail = document.getElementById('err-su-email');
+  const errPass = document.getElementById('err-su-pass');
+  const errPass2 = document.getElementById('err-su-pass2');
+  
+  let ok = true;
+  if (!email || !isValidEmailFormat(email)) {
+    errEmail.style.display = 'block';
+    ok = false;
+  } else {
+    errEmail.style.display = 'none';
+  }
+  if (pass.length < 8) {
+    errPass.style.display = 'block';
+    ok = false;
+  } else {
+    errPass.style.display = 'none';
+  }
+  if (pass !== pass2 || !pass2) {
+    errPass2.style.display = 'block';
+    ok = false;
+  } else {
+    errPass2.style.display = 'none';
+  }
+  if (!firstname || !lastname) ok = false;
+  
+  if (!ok) return;
+  
+  try {
+    const response = await fetch('/api/auth/signup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ firstName: firstname, lastName: lastname, email, password: pass }),
+    });
+    
+    const data = await response.json();
+    
+    if (response.ok) {
+      showLoginView('verify');
+    } else {
+      alert(data.error || 'Erreur lors de l\'inscription.');
+    }
+  } catch (err) {
+    console.error('Erreur:', err);
+    alert('Erreur lors de l\'inscription. Vérifiez votre connexion Internet.');
+  }
+}
+
+// Déconnexion
+async function logout() {
+  try {
+    await fetch('/api/auth/logout', { method: 'POST' });
+    currentUser = null;
+    showUnauthenticatedUI();
+  } catch (err) {
+    console.error('Erreur:', err);
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Gestion des formulaires
+// -----------------------------------------------------------------------------
+
+// Ouvrir un formulaire
+function openForm(formKey) {
+  currentFormKey = formKey;
+  currentStep = 1;
+  formData = {};
+  
+  document.getElementById('menu-view').style.display = 'none';
+  document.getElementById('wizard-view').style.display = 'block';
+  
+  const cat = categoryForms[currentCategoryKey];
+  document.getElementById('hero-title').textContent = cat.forms[formKey].title;
+  document.getElementById('hero-sub').textContent = cat.title + ' · Formulaire de demande';
+  document.getElementById('hero-back').style.display = 'flex';
+  
+  renderSteps();
+  showStep(1);
+}
+
+// Retour au menu
+function backToMenu() {
+  document.getElementById('menu-view').style.display = 'block';
+  document.getElementById('wizard-view').style.display = 'none';
+  const cat = categoryForms[currentCategoryKey];
+  document.getElementById('hero-title').textContent = cat ? cat.title : 'Catégorie';
+  document.getElementById('hero-sub').textContent = 'Choisissez le formulaire correspondant à votre demande';
+  document.getElementById('hero-back').style.display = 'none';
+  renderCategoryMenu();
+  currentFormKey = null;
+}
+
+// Retour à l'accueil
+function backToAccueil() {
+  document.getElementById('wizard-view').style.display = 'none';
+  document.getElementById('menu-view').style.display = 'block';
+  currentFormKey = null;
+  currentCategoryKey = null;
+}
+
+// Ouvrir une catégorie
+function openCategoryScreen(catKey, formKey) {
+  currentCategoryKey = catKey;
+  const cat = categoryForms[catKey];
+  document.getElementById('hero-title').textContent = cat.title;
+  
+  if (formKey) {
+    openForm(formKey);
+  } else {
+    renderCategoryMenu();
+    backToMenu();
+  }
+}
+
+// Obtenir le formulaire actuel
+function getCurrentForm() {
+  return categoryForms[currentCategoryKey].forms[currentFormKey];
+}
+
+// Soumettre un formulaire
+async function submitForm() {
+  const form = getCurrentForm();
+  
+  // Préparer les données
+  const requestData = {
+    categoryKey: currentCategoryKey,
+    formKey: currentFormKey,
+    title: form.title,
+    data: formData,
+  };
+  
+  try {
+    const response = await fetch('/api/requests', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(requestData),
+    });
+    
+    const data = await response.json();
+    
+    if (response.ok) {
+      // Ajouter à la liste locale
+      submittedRequests.unshift({
+        id: data.request.id,
+        ref: data.request.reference,
+        title: form.title,
+        category: categoryForms[currentCategoryKey].title,
+        date: new Date().toLocaleDateString('fr-FR'),
+        status: data.request.status,
+      });
+      
+      // Afficher le succès
+      document.getElementById('wz-main').innerHTML = `
+        <div class="wz-success">
+          <div class="wz-success-icon">${icon('check')}</div>
+          <div class="wz-success-title">Demande envoyée</div>
+          <div class="wz-success-text">Votre demande « ${form.title} » a été transmise.</div>
+          <div class="wz-success-ref">Référence : <strong>${data.request.reference}</strong></div>
+          <button class="wz-btn-primary" style="margin-top:18px;" onclick="backToAccueil()">Retour à l'accueil</button>
+        </div>
+      `;
+      document.getElementById('wz-footer').style.display = 'none';
+      renderSuiviLists();
+    } else {
+      alert(data.error || 'Erreur lors de l\'envoi.');
+    }
+  } catch (err) {
+    console.error('Erreur:', err);
+    alert('Erreur de connexion.');
+  }
+}
+
+// Charger les demandes
+async function renderSuiviLists() {
+  if (!currentUser) {
+    // Demandes d'exemple si non connecté
+    submittedRequests = sampleRequests;
+  } else {
+    try {
+      const response = await fetch('/api/requests');
+      const data = await response.json();
+      
+      if (response.ok) {
+        submittedRequests = data.requests.map(r => ({
+          id: r.id,
+          ref: r.reference,
+          title: r.title,
+          category: r.category_key,
+          date: new Date(r.created_at).toLocaleDateString('fr-FR'),
+          status: r.status,
+        }));
+      }
+    } catch (err) {
+      console.error('Erreur:', err);
+      submittedRequests = sampleRequests;
+    }
+  }
+  
+  const enCoursList = document.getElementById('suivi-en-cours-list');
+  const enCoursEmpty = document.getElementById('suivi-en-cours-empty');
+  const termineesList = document.getElementById('suivi-terminees-list');
+  const termineesEmpty = document.getElementById('suivi-terminees-empty');
+  
+  const enCours = submittedRequests.filter(r => r.status === 'brouillon' || r.status === 'en_cours');
+  const terminees = submittedRequests.filter(r => r.status === 'traitee' || r.status === 'annulee' || r.status === 'rejetee');
+  
+  enCoursList.innerHTML = enCours.map(renderSuiviCard).join('');
+  enCoursEmpty.style.display = enCours.length === 0 ? 'block' : 'none';
+  
+  termineesList.innerHTML = terminees.map(renderSuiviCard).join('');
+  termineesEmpty.style.display = terminees.length === 0 ? 'block' : 'none';
+}
+
+// Rendre une carte de suivi
+function renderSuiviCard(r) {
+  const st = statusLabels[r.status];
+  const isDraft = r.status === 'brouillon';
+  return `<div class="suivi-card">
+    <div class="suivi-card-icon">${icon(isDraft ? 'filePencil' : 'fileText')}</div>
+    <div class="suivi-card-main">
+      <div class="suivi-card-title">${r.title}</div>
+      <div class="suivi-card-meta">${r.category} · Réf. ${r.ref} · ${r.date}</div>
+    </div>
+    <div class="suivi-card-right">
+      <span class="suivi-status ${st.cls}">${st.label}</span>
+      ${isDraft ? `<button class="suivi-card-action" onclick="alert('Reprendre le brouillon ${r.ref}')">Reprendre</button>` : `<button class="suivi-card-action" onclick="alert('Détail de la demande ${r.ref}')">Détail</button>`}
+    </div>
+  </div>`;
+}
+
+// -----------------------------------------------------------------------------
+// Rendu des catégories et formulaires
+// -----------------------------------------------------------------------------
+
+// Rendre les catégories
+function renderCategories(filterText) {
+  const grid = document.getElementById('cat-grid');
+  const noResults = document.getElementById('no-results');
+  const q = (filterText || '').trim().toLowerCase();
+  let visibleCount = 0;
+  let html = '';
+  
+  categoryMeta.forEach((meta) => {
+    const cat = categoryForms[meta.key];
+    const allFormKeys = Object.keys(cat.forms);
+    let matchingKeys = allFormKeys;
+    let catMatches = true;
+    
+    if (q) {
+      const catNameMatch = cat.title.toLowerCase().includes(q);
+      matchingKeys = allFormKeys.filter(k => cat.forms[k].title.toLowerCase().includes(q));
+      catMatches = catNameMatch || matchingKeys.length > 0;
+      if (catNameMatch) matchingKeys = allFormKeys;
+    }
+    
+    if (!catMatches) return;
+    visibleCount++;
+    const isOpen = q && matchingKeys.length > 0;
+    
+    html += `<div class="cat-card ${isOpen ? 'open' : ''}" id="cat-${meta.key}">
+      <div class="cat-header" onclick="toggleCat('${meta.key}')">
+        <div class="cat-header-left">
+          <div class="cat-icon" style="background:${meta.bg};color:${meta.fg};">${icon(meta.icon)}</div>
+          <div class="cat-name">${cat.title}</div>
+        </div>
+        <span class="svg-icon chevron">${icon('chevronDown')}</span>
+      </div>
+      <div class="cat-body">
+        ${matchingKeys.map(k => {
+          const f = cat.forms[k];
+          return `<div class="form-item" onclick="event.stopPropagation(); handleFormClick('${meta.key}', '${k}')">
+            <span>${f.title}</span>
+            <span class="form-item-steps">${f.steps.length} étape${f.steps.length > 1 ? 's' : ''}</span>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+  });
+  
+  grid.innerHTML = html;
+  grid.style.display = visibleCount === 0 ? 'none' : 'grid';
+  noResults.style.display = visibleCount === 0 ? 'block' : 'none';
+}
+
+// Basculer une catégorie
+function toggleCat(key) {
+  document.getElementById('cat-' + key).classList.toggle('open');
+}
+
+// Filtrer les catégories
+function filterCategories() {
+  renderCategories(document.getElementById('search-input').value);
+}
+
+// Gérer le clic sur un formulaire
+function handleFormClick(catKey, formKey) {
+  if (categoryForms[catKey] && categoryForms[catKey].forms[formKey]) {
+    openCategoryScreen(catKey, formKey);
+  } else {
+    alert('Ce formulaire n\'est pas encore construit.');
+  }
+}
+
+// Rendre le menu des formulaires d'une catégorie
+function renderCategoryMenu() {
+  const cat = categoryForms[currentCategoryKey];
+  const grid = document.getElementById('form-menu-grid');
+  
+  grid.innerHTML = Object.keys(cat.forms).map(key => {
+    const f = cat.forms[key];
+    return `<div class="form-menu-item" onclick="openForm('${key}')">
+      <div class="form-menu-icon">${icon(f.icon || 'fileText')}</div>
+      <div class="form-menu-text">
+        <div class="form-menu-name">${f.title}</div>
+        <div class="form-menu-steps">${f.steps.length} étape${f.steps.length > 1 ? 's' : ''}</div>
+      </div>
+      <div class="form-menu-arrow">${icon('chevronRight')}</div>
+    </div>`;
+  }).join('');
+}
+
+// -----------------------------------------------------------------------------
+// Rendu des étapes et des champs de formulaire
+// -----------------------------------------------------------------------------
+
+// Rendre les étapes
+function renderSteps() {
+  const form = getCurrentForm();
+  document.getElementById('wz-steps').innerHTML = form.steps.map((s, idx) => {
+    const num = idx + 1;
+    const state = num < currentStep ? 'done' : num === currentStep ? 'current' : '';
+    const showLine = num < form.steps.length;
+    return `<div class="wz-step ${state}" onclick="goToStep(${num})" style="position:relative;">
+      <div class="wz-step-num">${num < currentStep ? icon('check') : num}</div>
+      <div class="wz-step-label">${s.label}</div>
+      ${showLine ? '<div class="wz-step-line"></div>' : ''}
+    </div>`;
+  }).join('');
+}
+
+// Rendre le contenu d'une étape
+function renderStepContent(stepIdx) {
+  const form = getCurrentForm();
+  const s = form.steps[stepIdx - 1];
+  let inner = '';
+  
+  if (s.type === 'checklist') {
+    inner = renderChecklistHtml(s.items, stepIdx);
+  } else if (s.type === 'fields') {
+    inner = renderFieldsHtml(s.fields, stepIdx);
+  } else if (s.type === 'mixed') {
+    inner = (s.radio ? renderRadioHtml(s.radio, stepIdx) : '') + (s.fields ? renderFieldsHtml(s.fields, stepIdx) : '');
+  } else if (s.type === 'summary') {
+    inner = renderSummaryHtml();
+  }
+  
+  return `<div class="wz-step-header">
+    <div class="wz-step-title">${s.title}</div>
+    <div class="wz-step-desc">${s.desc}</div>
+  </div>${inner}`;
+}
+
+// Afficher une étape
+function showStep(n) {
+  const form = getCurrentForm();
+  document.getElementById('wz-main').innerHTML = renderStepContent(n);
+  document.getElementById('wz-progress').textContent = `Étape ${n} sur ${form.steps.length}`;
+  document.getElementById('btn-prev').disabled = (n === 1);
+  const btnNext = document.getElementById('btn-next');
+  btnNext.textContent = n === form.steps.length ? 'Envoyer la demande' : 'Suivant →';
+  document.getElementById('wz-footer').style.display = 'flex';
+  renderSteps();
+}
+
+// Aller à une étape
+function goToStep(n) {
+  saveCurrentStepData(currentStep);
+  if (n <= currentStep || n === currentStep + 1) {
+    currentStep = n;
+    showStep(currentStep);
+  }
+}
+
+// Sauvegarder les données de l'étape actuelle
+function saveCurrentStepData(stepIdx) {
+  const form = getCurrentForm();
+  const s = form.steps[stepIdx - 1];
+  if (!s) return;
+  
+  if (s.type === 'fields' || s.type === 'mixed') {
+    document.querySelectorAll(`.wz-input[data-step="${stepIdx}"]`).forEach(input => {
+      formData[stepIdx + '-field-' + input.dataset.field] = input.value;
+    });
+  }
+  
+  if (s.type === 'mixed' && s.radio) {
+    const selected = document.querySelector(`.wz-radio-row[data-step="${stepIdx}"] .wz-radio-item.selected`);
+    formData[stepIdx + '-radio'] = selected ? selected.textContent.trim() : '';
+  }
+  
+  if (s.type === 'checklist') {
+    const checked = Array.from(document.querySelectorAll(`.wz-check-group[data-step="${stepIdx}"] .wz-check-item.checked`)).map(el => el.textContent.trim());
+    formData[stepIdx + '-checklist'] = checked;
+  }
+}
+
+// Étape suivante
+function nextStep() {
+  const form = getCurrentForm();
+  saveCurrentStepData(currentStep);
+  if (currentStep === form.steps.length) {
+    submitForm();
+    return;
+  }
+  currentStep++;
+  showStep(currentStep);
+}
+
+// Étape précédente
+function prevStep() {
+  if (currentStep > 1) {
+    saveCurrentStepData(currentStep);
+    currentStep--;
+    showStep(currentStep);
+  }
+}
+
+// Basculer une case à cocher
+function toggleCheck(el) {
+  el.classList.toggle('checked');
+}
+
+// Sélectionner une option radio
+function selectRadio(el) {
+  const row = el.parentElement;
+  row.querySelectorAll('.wz-radio-item').forEach(item => item.classList.remove('selected'));
+  el.classList.add('selected');
+}
+
+// -----------------------------------------------------------------------------
+// Fonctions de rendu HTML
+// -----------------------------------------------------------------------------
+
+// Rendre les champs de formulaire
+function renderFieldsHtml(fields, stepIdx) {
+  return fields.map((f, fi) => {
+    if (f.type === 'textarea') {
+      return `<div class="wz-field">
+        <label class="wz-field-label">${f.label} ${f.req ? '<span class="req">*</span>' : ''}</label>
+        <textarea class="wz-input" data-step="${stepIdx}" data-field="${fi}" rows="3" style="resize:vertical;"></textarea>
+      </div>`;
+    }
+    return `<div class="wz-field">
+      <label class="wz-field-label">${f.label} ${f.req ? '<span class="req">*</span>' : ''}</label>
+      <input class="wz-input" data-step="${stepIdx}" data-field="${fi}" type="${f.type || 'text'}" />
+    </div>`;
+  }).join('');
+}
+
+// Rendre les options radio
+function renderRadioHtml(radio, stepIdx) {
+  return `<div class="wz-field">
+    <label class="wz-field-label">${radio.label} ${radio.req ? '<span class="req">*</span>' : ''}</label>
+    <div class="wz-radio-row" data-step="${stepIdx}" data-radiogroup="true">
+      ${radio.options.map(opt => `<div class="wz-radio-item" onclick="selectRadio(this)">${opt}</div>`).join('')}
+    </div>
+  </div>`;
+}
+
+// Rendre une checklist
+function renderChecklistHtml(items, stepIdx) {
+  return `<div class="wz-check-group" data-step="${stepIdx}">
+    ${items.map(item => `<div class="wz-check-item" onclick="toggleCheck(this)">
+      <div class="wz-checkbox"></div>${item}
+    </div>`).join('')}
+  </div>`;
+}
+
+// Rendre le récapitulatif
+function renderSummaryHtml() {
+  const form = getCurrentForm();
+  let html = '<div class="wz-summary-section"><div class="wz-summary-title">Récapitulatif</div>';
+  
+  form.steps.forEach((s, idx) => {
+    if (s.type === 'summary') return;
+    const stepNum = idx + 1;
+    
+    if (s.type === 'fields') {
+      s.fields.forEach((f, fi) => {
+        const val = formData[stepNum + '-field-' + fi] || '—';
+        html += `<div class="wz-summary-row">
+          <span class="wz-summary-key">${f.label}</span>
+          <span class="wz-summary-val">${val}</span>
+        </div>`;
+      });
+    } else if (s.type === 'checklist') {
+      const checked = formData[stepNum + '-checklist'] || [];
+      html += `<div class="wz-summary-row">
+        <span class="wz-summary-key">${s.label}</span>
+        <span class="wz-summary-val">${checked.length ? checked.join(', ') : 'Aucun'}</span>
+      </div>`;
+    } else if (s.type === 'mixed') {
+      if (s.radio) {
+        const val = formData[stepNum + '-radio'] || '—';
+        html += `<div class="wz-summary-row">
+          <span class="wz-summary-key">${s.radio.label}</span>
+          <span class="wz-summary-val">${val}</span>
+        </div>`;
+      }
+      if (s.fields && s.fields.length) {
+        s.fields.forEach((f, fi) => {
+          const val = formData[stepNum + '-field-' + fi] || '—';
+          html += `<div class="wz-summary-row">
+            <span class="wz-summary-key">${f.label}</span>
+            <span class="wz-summary-val">${val}</span>
+          </div>`;
+        });
+      }
+    }
+  });
+  
+  html += '</div><div class="wz-hint">En cliquant sur « Envoyer la demande », celle-ci sera transmise aux services concernés pour traitement.</div>';
+  return html;
+}
+
+// -----------------------------------------------------------------------------
+// Fonctions de compatibilité (pour les appels depuis le HTML)
+// -----------------------------------------------------------------------------
+
+// Afficher un écran (compatibilité avec l'ancien code)
+function showScreen(name, btn) {
+  if (name === 'accueil') {
+    showAuthenticatedUI();
+  } else if (name === 'connexion') {
+    showUnauthenticatedUI();
+  }
+}
+
+// Afficher un onglet de l'accueil (compatibilité)
+function showAccueilTab(tab) {
+  document.getElementById('tab-accueil').classList.toggle('active', tab === 'accueil');
+  document.getElementById('tab-suivi').classList.toggle('active', tab === 'suivi');
+  document.getElementById('accueil-tab-view').style.display = tab === 'accueil' ? 'block' : 'none';
+  document.getElementById('suivi-tab-view').style.display = tab === 'suivi' ? 'block' : 'none';
+  if (tab === 'suivi') renderSuiviLists();
+}
+
+// Afficher une vue de connexion (compatibilité)
+function showLoginView(name) {
+  document.querySelectorAll('.login-view').forEach(v => v.classList.remove('active'));
+  document.getElementById('view-' + name).classList.add('active');
+}
+
+// -----------------------------------------------------------------------------
+// Initialisation
+// -----------------------------------------------------------------------------
+
+// Au chargement de la page
+window.addEventListener('DOMContentLoaded', () => {
+  checkAuth();
+  renderCategories('');
+});
