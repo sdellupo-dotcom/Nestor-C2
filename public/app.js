@@ -6,6 +6,7 @@
 // -----------------------------------------------------------------------------
 // État global
 // -----------------------------------------------------------------------------
+console.log("APP.JS EXECUTE");
 let currentUser = null;
 let currentCategoryKey = null;
 let currentFormKey = null;
@@ -305,11 +306,6 @@ const categoryForms = {
   }
 };
 
-let currentCategoryKey = null;
-let currentFormKey = null;
-let currentStep = 1;
-let formData = {};
-
 // Premier rendu de l'Accueil, maintenant que categoryForms est défini
 renderCategories('');
 
@@ -479,7 +475,6 @@ function selectRadio(el){
 /* ===================== SUIVI DES DEMANDES (stockage en mémoire pour la démo) =====================
    Dans la vraie application, ces données viendraient d'une base de données côté serveur,
    propre à l'agent connecté. Ici, on simule juste la persistance pendant la session du navigateur. */
-let submittedRequests = [];
 
 function submitForm(){
   const form = getCurrentForm();
@@ -548,26 +543,6 @@ function renderSuiviCard(r){
     </div>
   </div>`;
 }
-</script>
-</body>
-</html>
-
-// Données des demandes d'exemple
-const sampleRequests = [
-  { ref: 'ARR-2026-2210', title: "Arrivée d'un nouvel agent", category: 'Arrivée/Départ', date: '12/06/2026', status: 'en_cours' },
-  { ref: 'FCO-2026-1187', title: 'Fournitures courantes', category: 'Fournitures', date: '03/06/2026', status: 'traitee' },
-  { ref: 'PBA-2026-0934', title: 'Déclaration de perte du badge', category: 'Accès aux sites', date: '28/05/2026', status: 'rejetee' },
-  { ref: 'VEH-2026-0712', title: 'Réservation de véhicule seul', category: 'Véhicule', date: '20/05/2026', status: 'annulee' }
-];
-
-// Étiquettes de statut
-const statusLabels = {
-  brouillon: { label: 'Brouillon', cls: 'status-brouillon' },
-  en_cours: { label: 'En cours de traitement', cls: 'status-encours' },
-  traitee: { label: 'Traitée', cls: 'status-traitee' },
-  annulee: { label: 'Annulée', cls: 'status-annulee' },
-  rejetee: { label: 'Rejetée', cls: 'status-rejetee' }
-};
 
 // -----------------------------------------------------------------------------
 // Fonctions utilitaires
