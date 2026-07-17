@@ -292,6 +292,9 @@ body { font-family: var(--font-sans); color: var(--text-primary); background: va
           <button class="link-btn" onclick="showLoginViewReal('forgot')">Mot de passe oublié ?</button>
           <button class="link-btn" onclick="showLoginViewReal('signup')">Créer un compte</button>
         </div>
+        <div class="debug-note">
+          <button class="btn-secondary" style="width:100%; border-style:dashed;" onclick="bypassAuth()">⚠ Bypass authentification (test uniquement)</button>
+        </div>
       </div>
 
       <div class="login-view" id="view-forgot">

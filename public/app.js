@@ -638,6 +638,13 @@ function showUnauthenticatedUI() {
   document.getElementById('screen-accueil').style.display = 'none';
 }
 
+// Bypass authentification (TEMPORAIRE - phase de test, à retirer avant mise en prod)
+function bypassAuth() {
+  currentUser = { authenticated: true, email: 'test@mon-domaine.com', firstname: 'Test', lastname: 'Utilisateur' };
+  showAuthenticatedUI();
+  renderSuiviLists();
+}
+
 // Connexion
 async function trySubmitLogin() {
   const email = document.getElementById('login-email').value.trim();
