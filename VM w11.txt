@@ -1,0 +1,30 @@
+Etape 1 : Lancer swtpm pour initialiser le tpm2.0
+
+swtpm socket \
+  --tpm2 \
+  --tpmstate dir=$HOME/Documents/VM1/Windows11/tpm \
+  --ctrl type=unixio,path=$HOME/Documents/VM1/Windows11/tpm/swtpm.sock \
+  --daemon
+
+Etape 2 : Lancer la VM
+
+qemu-system-x86_64 \
+-enable-kvm \
+-machine q35,accel=kvm \
+-cpu host \
+-smp 4 \
+-m 8192 \
+-drive if=pflash,format=raw,readonly=on,file=/usr/share/OVMF/OVMF_CODE_4M.ms.fd \
+-drive if=pflash,format=raw,file=/home/c2rmf-admin/Documents/VM1/Windows11/OVMF_VARS.ms.fd \
+-device ich9-ahci,id=ahci \
+-drive id=disk0,if=none,file=/home/c2rmf-admin/Documents/VM1/Windows11/windows11.qcow2,format=qcow2 \
+-device ide-hd,drive=disk0,bus=ahci.0 \
+-cdrom /home/c2rmf-admin/Téléchargements/Win11_25H2_French_x64_v2.iso \
+-chardev socket,id=chrtpm,path=/home/c2rmf-admin/Documents/VM1/Windows11/tpm/swtpm.sock \
+-tpmdev emulator,id=tpm0,chardev=chrtpm \
+-device tpm-crb,tpmdev=tpm0 \
+-device virtio-vga \
+-display gtk \
+-boot order=d
+
+virt-manager : lancer QEMU
