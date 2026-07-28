@@ -5,25 +5,41 @@
 require('dotenv').config();
 const fs = require('fs');
 const path = require('path');
-const { pool } = require('./pool');
+const { query } = require('./pool');
+
+const schemaSQL = fs.readFileSync(path.join(__dirname, 'schema.sql'), 'utf8');
 
 async function migrate() {
-  const schemaPath = path.join(__dirname, 'schema.sql');
-  const schemaSql = fs.readFileSync(schemaPath, 'utf8');
+  console.log('[MIGRATE] Début de la migration...');
 
-  console.log('Application du schéma sur la base de données...');
   try {
-    await pool.query(schemaSql);
-    console.log('Schéma appliqué avec succès.');
+    const { rows } = await query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables
+        WHERE table_schema = 'public'
+        AND table_name = 'users'
+      ) as exists;
+    `);
+
+    if (rows[0].exists) {
+      console.log('[MIGRATE] La base de données existe déjà. Migration annulée.');
+      process.exit(0);
+    }
+
+    const queries = schemaSQL
+      .split(';')
+      .map(q => q.trim())
+      .filter(q => q.length > 0);
+
+    for (const q of queries) {
+      await query(q);
+    }
+
+    console.log('[MIGRATE] Migration terminée avec succès !');
+    process.exit(0);
   } catch (err) {
-    console.error('Échec de la migration :', err.message);
-    console.error(
-      'Si les tables existent déjà, c\'est probablement normal — ' +
-      'ce script est pensé pour une base vide. Vérifiez avant de relancer.'
-    );
-    process.exitCode = 1;
-  } finally {
-    await pool.end();
+    console.error('[MIGRATE] Erreur:', err.message);
+    process.exit(1);
   }
 }
 
