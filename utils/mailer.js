@@ -4,101 +4,55 @@
 
 const nodemailer = require('nodemailer');
 
-// Configuration du transporteur SMTP
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST,
   port: parseInt(process.env.SMTP_PORT || '587', 10),
-  secure: process.env.SMTP_SECURE === 'true', // true pour 465, false pour les autres ports
+  secure: process.env.SMTP_SECURE === 'true',
   auth: {
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASSWORD,
   },
   tls: {
-    // Ne pas rejeter les certificats auto-signés (pour les environnements internes)
-    rejectUnauthorized: process.env.SMTP_REJECT_UNAUTHORIZED !== 'true',
+    rejectUnauthorized: false,
   },
 });
 
-// Vérifie la connexion SMTP au démarrage
-async function verifySmtpConnection() {
+function checkSMTPConfig() {
+  const requiredVars = ['SMTP_HOST', 'SMTP_PORT', 'SMTP_USER', 'SMTP_PASSWORD'];
+  return requiredVars.every(varName => process.env[varName]);
+}
+
+async function sendVerificationEmail(email, firstName, verificationLink) {
+  if (!checkSMTPConfig()) {
+    console.log('[MAILER] SMTP non configuré. Lien de vérification:', verificationLink);
+    return false;
+  }
+
   try {
-    await transporter.verify();
-    console.log('[mailer] Connexion SMTP vérifiée avec succès.');
+    await transporter.sendMail({
+      from: `"Nestor-C2" <${process.env.SMTP_USER}>`,
+      to: email,
+      subject: 'Vérifiez votre adresse e-mail - Nestor-C2',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2>Vérifiez votre adresse e-mail</h2>
+          <p>Bonjour ${firstName},</p>
+          <p>Pour finaliser votre inscription, cliquez sur le lien ci-dessous :</p>
+          <p style="text-align: center; margin: 20px 0;">
+            <a href="${verificationLink}" style="background: #3498db; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px;">
+              Vérifier mon e-mail
+            </a>
+          </p>
+          <p>Ce lien expirera dans 24 heures.</p>
+        </div>
+      `,
+      text: `Bonjour ${firstName},\n\nPour finaliser votre inscription, visitez : ${verificationLink}\n\nCe lien expirera dans 24 heures.`,
+    });
+    return true;
   } catch (err) {
-    console.error('[mailer] Échec de la vérification SMTP :', err.message);
-    console.error(
-      'Vérifiez les variables SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD dans .env.'
-    );
+    console.error('[MAILER] Erreur:', err.message);
+    return false;
   }
 }
 
-// Envoie un e-mail de vérification
-async function sendVerificationEmail(email, verificationUrl) {
-  const subject = 'Vérifiez votre adresse e-mail — Portail Services Internes';
-  const html = `
-    <p>Bonjour,</p>
-    <p>Pour activer votre compte sur le Portail Services Internes, cliquez sur le lien ci-dessous :</p>
-    <p><a href="${verificationUrl}">${verificationUrl}</a></p>
-    <p>Ce lien expirera dans 48 heures.</p>
-    <p>Si vous n'avez pas demandé la création de ce compte, ignorez cet e-mail.</p>
-  `;
-
-  await transporter.sendMail({
-    from: `"Portail Services Internes" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
-    to: email,
-    subject,
-    html,
-  });
-
-  console.log(`[mailer] E-mail de vérification envoyé à ${email}`);
-}
-
-// Envoie un e-mail de réinitialisation de mot de passe
-async function sendPasswordResetEmail(email, resetUrl) {
-  const subject = 'Réinitialisez votre mot de passe — Portail Services Internes';
-  const html = `
-    <p>Bonjour,</p>
-    <p>Vous avez demandé la réinitialisation de votre mot de passe. Cliquez sur le lien ci-dessous pour définir un nouveau mot de passe :</p>
-    <p><a href="${resetUrl}">${resetUrl}</a></p>
-    <p>Ce lien expirera dans 2 heures.</p>
-    <p>Si vous n'avez pas demandé cette réinitialisation, ignorez cet e-mail.</p>
-  `;
-
-  await transporter.sendMail({
-    from: `"Portail Services Internes" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
-    to: email,
-    subject,
-    html,
-  });
-
-  console.log(`[mailer] E-mail de réinitialisation envoyé à ${email}`);
-}
-
-// Envoie un e-mail de configuration de mot de passe (pour les valideurs créés par l'admin)
-async function sendPasswordSetupEmail(email, setupUrl) {
-  const subject = 'Configurez votre mot de passe — Portail Services Internes';
-  const html = `
-    <p>Bonjour,</p>
-    <p>Un compte valideur a été créé pour vous. Cliquez sur le lien ci-dessous pour définir votre mot de passe :</p>
-    <p><a href="${setupUrl}">${setupUrl}</a></p>
-    <p>Ce lien expirera dans 72 heures.</p>
-    <p>Si vous n'attendiez pas ce compte, contactez votre administrateur.</p>
-  `;
-
-  await transporter.sendMail({
-    from: `"Portail Services Internes" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
-    to: email,
-    subject,
-    html,
-  });
-
-  console.log(`[mailer] E-mail de configuration envoyé à ${email}`);
-}
-
-module.exports = {
-  transporter,
-  verifySmtpConnection,
-  sendVerificationEmail,
-  sendPasswordResetEmail,
-  sendPasswordSetupEmail,
-};
+module.exports = { sendVerificationEmail, checkSMTPConfig };
