@@ -84,7 +84,7 @@ function icon(name, extraStyle) {
 const categoryMeta = [
   { key: 'arrivee-depart', icon: 'walk', bg: '#9FE1CB', fg: '#085041' },
   { key: 'fournitures', icon: 'package', bg: '#F5C4B3', fg: '#712B13' },
-  { key: 'reprographie', icon: 'printer', bg: '#B5D4F4', fg: '#0C447C' },
+  { key: 'budget', icon: 'files', bg: '#B5D4F4', fg: '#0C447C' },
   { key: 'menage', icon: 'spray', bg: '#F4C0D1', fg: '#72243E' },
   { key: 'intervention-technique', icon: 'tool', bg: '#FAC775', fg: '#633806' },
   { key: 'acces-sites', icon: 'badge', bg: '#85B7EB', fg: '#042C53' },
@@ -154,23 +154,70 @@ const categoryForms = {
     }
   },
 
-  'reprographie': {
-    title: 'Reprographie',
+  'budget': {
+    title: 'Budget',
     forms: {
-      multipages: { title: "Documents multipages et livrets", ref: "REP", icon: 'files', steps: [
-        { label: "Identité de l'agent demandeur", title: "Identité de l'agent demandeur", desc: "Renseignez vos coordonnées", type: 'fields', fields: [{label:"Prénom", req:true},{label:"Nom", req:true},{label:"Service / direction", req:true}] },
-        { label: "Détail de la demande", title: "Détail de la demande", desc: "Précisez les caractéristiques du document", type: 'mixed', radio: {label:"Type de finition", options:["Agrafé","Relié","Livret plié"]}, fields: [{label:"Nombre de pages", req:true},{label:"Nombre d'exemplaires", req:true}] },
-        { label: "Validation", title: "Validation", desc: "Vérifiez le récapitulatif avant envoi", type: 'summary' }
-      ]},
-      carterie: { title: "Carterie et bloc-notes", ref: "CAR", icon: 'notebook', steps: [
-        { label: "Identité de l'agent demandeur", title: "Carterie et bloc-notes", desc: "Renseignez vos coordonnées et votre besoin", type: 'fields', fields: [{label:"Prénom", req:true},{label:"Nom", req:true},{label:"Service / direction", req:true},{label:"Type de support (carte / bloc-notes)", req:true},{label:"Quantité"}] },
-        { label: "Validation", title: "Validation", desc: "Vérifiez le récapitulatif avant envoi", type: 'summary' }
-      ]},
-      massicotage: { title: "Massicotage et reliure", ref: "MAS", icon: 'cut', steps: [
-        { label: "Identité de l'agent demandeur", title: "Identité de l'agent demandeur", desc: "Renseignez vos coordonnées", type: 'fields', fields: [{label:"Prénom", req:true},{label:"Nom", req:true},{label:"Service / direction", req:true}] },
-        { label: "Détail de la demande", title: "Détail de la demande", desc: "Précisez le type de prestation", type: 'mixed', radio: {label:"Prestation souhaitée", options:["Massicotage","Reliure spirale","Reliure thermocollée"]}, fields: [{label:"Nombre de documents", req:true}] },
-        { label: "Validation", title: "Validation", desc: "Vérifiez le récapitulatif avant envoi", type: 'summary' }
-      ]}
+      proposition_depenses: { 
+        title: "PROPOSITION DE DÉPENSES", 
+        ref: "BUD", 
+        icon: 'files', 
+        steps: [
+          { 
+            label: "Identifiant du demandeur", 
+            title: "Identifiant du demandeur", 
+            desc: "Renseignez vos coordonnées", 
+            type: 'fields', 
+            fields: [
+              {label:"Nom", req:true, type:'text'},
+              {label:"Prénom", req:true, type:'text'},
+              {label:"Direction", req:true, type:'text'}
+            ] 
+          },
+          { 
+            label: "Identifiant du fournisseur", 
+            title: "Identifiant du fournisseur", 
+            desc: "Renseignez les informations du fournisseur", 
+            type: 'fields', 
+            fields: [
+              {label:"Nom", req:true, type:'text'},
+              {label:"Adresse", req:true, type:'text'},
+              {label:"Mail du fournisseur", req:true, type:'text'},
+              {label:"Si nouveau fournisseur, numéro de SIRET et RIB obligatoires", req:false, type:'text'}
+            ] 
+          },
+          { 
+            label: "Nature de la commande", 
+            title: "Nature de la commande", 
+            desc: "Précisez les détails de la commande", 
+            type: 'mixed', 
+            radio: {label:"Type de commande", req:true, options:["de l'acquisition","de la prestation"]}, 
+            fields: [
+              {label:"Titre de la commande", req:true, type:'text'},
+              {label:"Justification", req:true, type:'text'},
+              {label:"Si dépense dans le cadre d'un projet spécifique (européen, PNCR) préciser lequel", req:false, type:'text'},
+              {label:"Montant de la commande", req:true, type:'text'}
+            ] 
+          },
+          { 
+            label: "Rappel des procédures", 
+            title: "Rappel des procédures", 
+            desc: "Pour rappel, les procédures applicables à la commande publique sont les suivantes", 
+            type: 'fixed', 
+            content: "<ul><li>Si dépense inférieure à 40 000 € HT : plusieurs devis souhaitables, publicité non obligatoire</li><li>Si dépense comprise entre 40 000€ HT et 90 000€ HT : établissement d'un cahier des charges pour un marché à procédure adaptée, publicité libre ou adaptée</li><li>Si dépense supérieure à 90 000 € HT et inférieure à 140 000 € HT : établissement d'un cahier des charges et publication au BOAMP ou dans un JAL</li><li>Si dépense supérieure à 140 000 HT : publication au BOAMP et au JOUE et recours obligatoire à la procédure formalisée des marchés publics</li></ul>"
+          },
+          { 
+            label: "Pièces jointes", 
+            title: "Pièces jointes", 
+            desc: "Chargez le devis et autres pièces jointes nécessaires (PDF, Word, JPG, RAW, TIFF - Max 5 Mo par fichier)", 
+            type: 'file-upload', 
+            allowed_formats: ['pdf', 'doc', 'docx', 'jpg', 'jpeg', 'raw', 'tiff', 'tif'],
+            max_file_size: 5242880,
+            max_files: 10,
+            required: false
+          },
+          { label: "Validation", title: "Validation", desc: "Vérifiez le récapitulatif avant envoi", type: 'summary' }
+        ]
+      }
     }
   },
 
@@ -398,6 +445,94 @@ function renderRadioHtml(radio, stepIdx){
 function renderChecklistHtml(items, stepIdx){
   return `<div class="wz-check-group" data-step="${stepIdx}">${items.map(item => `<div class="wz-check-item" onclick="toggleCheck(this)"><div class="wz-checkbox"></div>${item}</div>`).join('')}</div>`;
 }
+function renderFileUploadHtml(config, stepIdx) {
+  const allowedFormats = config.allowed_formats || ['pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png'];
+  const maxFileSize = config.max_file_size || 5242880;
+  const maxFiles = config.max_files || 10;
+  const maxSizeMb = Math.round(maxFileSize / (1024 * 1024));
+  
+  return `
+    <div class="wz-file-upload-container" data-step="${stepIdx}">
+      <div class="wz-file-upload-hint">
+        Formats autorisés: ${allowedFormats.join(', ')} | Taille max: ${maxSizeMb} Mo par fichier | Max ${maxFiles} fichiers
+      </div>
+      <input type="file" class="wz-file-input" data-step="${stepIdx}" 
+             accept=".${allowedFormats.join(',.')}" 
+             multiple 
+             onchange="handleFileUpload(this, ${maxFileSize}, ${maxFiles}, ['${allowedFormats.join("','")}'])" />
+      <div class="wz-file-list" data-step="${stepIdx}" id="file-list-${stepIdx}"></div>
+      <button class="wz-btn-primary" onclick="document.querySelector('.wz-file-input[data-step="${stepIdx}"]').click()">
+        Sélectionner des fichiers
+      </button>
+    </div>
+  `;
+}
+
+function handleFileUpload(input, maxFileSize, maxFiles, allowedFormats) {
+  const stepIdx = input.dataset.step;
+  const fileListContainer = document.getElementById(`file-list-${stepIdx}`) || document.querySelector(`.wz-file-list[data-step="${stepIdx}"]`);
+  
+  if (!fileListContainer) return;
+  
+  const files = Array.from(input.files);
+  let hasError = false;
+  let errorMessage = '';
+  
+  files.forEach(file => {
+    const fileExt = file.name.split('.').pop().toLowerCase();
+    
+    if (!allowedFormats.includes(fileExt)) {
+      hasError = true;
+      errorMessage = `Format de fichier non autorisé: ${file.name}. Formats autorisés: ${allowedFormats.join(', ')}`;
+      return;
+    }
+    
+    if (file.size > maxFileSize) {
+      hasError = true;
+      errorMessage = `Fichier trop volumineux: ${file.name}. Taille max: ${Math.round(maxFileSize / (1024 * 1024))} Mo`;
+      return;
+    }
+    
+    const existingFiles = fileListContainer.querySelectorAll('.wz-file-item').length;
+    if (existingFiles + files.length > maxFiles) {
+      hasError = true;
+      errorMessage = `Nombre maximal de fichiers (${maxFiles}) dépassé`;
+      return;
+    }
+  });
+  
+  if (hasError) {
+    alert(errorMessage);
+    input.value = '';
+    return;
+  }
+  
+  files.forEach(file => {
+    const fileItem = document.createElement('div');
+    fileItem.className = 'wz-file-item';
+    fileItem.dataset.filename = file.name;
+    fileItem.dataset.filesize = file.size;
+    fileItem.dataset.filetype = file.type || file.name.split('.').pop();
+    fileItem.innerHTML = `
+      <span class="wz-file-name">${file.name}</span>
+      <span class="wz-file-size">(${formatFileSize(file.size)})</span>
+      <span class="wz-file-remove" onclick="removeFile(this)">✕</span>
+    `;
+    fileListContainer.appendChild(fileItem);
+  });
+}
+
+function removeFile(button) {
+  const fileItem = button.parentElement;
+  fileItem.remove();
+}
+
+function formatFileSize(bytes) {
+  if (bytes < 1024) return bytes + ' octets';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + ' Ko';
+  return (bytes / (1024 * 1024)).toFixed(2) + ' Mo';
+}
+
 function renderSummaryHtml(){
   const form = getCurrentForm();
   let html = '<div class="wz-summary-section"><div class="wz-summary-title">Récapitulatif</div>';
@@ -425,6 +560,8 @@ function renderStepContent(stepIdx){
   else if(s.type === 'fields') inner = renderFieldsHtml(s.fields, stepIdx);
   else if(s.type === 'mixed') inner = (s.radio ? renderRadioHtml(s.radio, stepIdx) : '') + (s.fields ? renderFieldsHtml(s.fields, stepIdx) : '');
   else if(s.type === 'summary') inner = renderSummaryHtml();
+  else if(s.type === 'fixed') inner = `<div class="wz-fixed-content">${s.content || ''}</div>`;
+  else if(s.type === 'file-upload') inner = renderFileUploadHtml(s, stepIdx);
   return `<div class="wz-step-header"><div class="wz-step-title">${s.title}</div><div class="wz-step-desc">${s.desc}</div></div>${inner}`;
 }
 function showStep(n){
@@ -455,6 +592,21 @@ function saveCurrentStepData(stepIdx){
   if(s.type === 'checklist'){
     const checked = Array.from(document.querySelectorAll(`.wz-check-group[data-step="${stepIdx}"] .wz-check-item.checked`)).map(el => el.textContent.trim());
     formData[stepIdx + '-checklist'] = checked;
+  }
+  if(s.type === 'file-upload'){
+    const fileList = document.querySelector(`.wz-file-list[data-step="${stepIdx}"]`);
+    if(fileList){
+      const files = [];
+      fileList.querySelectorAll('.wz-file-item').forEach(item => {
+        const fileData = {
+          name: item.dataset.filename,
+          size: item.dataset.filesize,
+          type: item.dataset.filetype
+        };
+        files.push(fileData);
+      });
+      formData[stepIdx + '-files'] = files;
+    }
   }
 }
 function nextStep(){
@@ -1082,6 +1234,10 @@ function renderStepContent(stepIdx) {
     inner = (s.radio ? renderRadioHtml(s.radio, stepIdx) : '') + (s.fields ? renderFieldsHtml(s.fields, stepIdx) : '');
   } else if (s.type === 'summary') {
     inner = renderSummaryHtml();
+  } else if (s.type === 'fixed') {
+    inner = `<div class="wz-fixed-content">${s.content || ''}</div>`;
+  } else if (s.type === 'file-upload') {
+    inner = renderFileUploadHtml(s, stepIdx);
   }
   
   return `<div class="wz-step-header">
@@ -1131,6 +1287,21 @@ function saveCurrentStepData(stepIdx) {
   if (s.type === 'checklist') {
     const checked = Array.from(document.querySelectorAll(`.wz-check-group[data-step="${stepIdx}"] .wz-check-item.checked`)).map(el => el.textContent.trim());
     formData[stepIdx + '-checklist'] = checked;
+  }
+  if (s.type === 'file-upload') {
+    const fileList = document.querySelector(`.wz-file-list[data-step="${stepIdx}"]`);
+    if (fileList) {
+      const files = [];
+      fileList.querySelectorAll('.wz-file-item').forEach(item => {
+        const fileData = {
+          name: item.dataset.filename,
+          size: item.dataset.filesize,
+          type: item.dataset.filetype
+        };
+        files.push(fileData);
+      });
+      formData[stepIdx + '-files'] = files;
+    }
   }
 }
 
