@@ -25,9 +25,12 @@ const router = express.Router();
 // Message volontairement identique dans tous les cas (nouveau compte,
 // compte déjà actif, compte en attente) pour ne pas permettre à quelqu'un
 // de déduire si une adresse e-mail est déjà inscrite (anti-énumération).
+// NOTE: Lorsque EMAIL_VERIFICATION_REQUIRED est false, les comptes sont activés automatiquement
 const GENERIC_SIGNUP_RESPONSE = {
   message:
-    "Si les conditions sont remplies, un e-mail de vérification a été envoyé à l'adresse fournie.",
+    process.env.EMAIL_VERIFICATION_REQUIRED === 'false' 
+      ? "Votre compte a été créé avec succès. Vous pouvez maintenant vous connecter."
+      : "Si les conditions sont remplies, un e-mail de vérification a été envoyé à l'adresse fournie.",
 };
 
 // ---------------------------------------------------------------
@@ -69,26 +72,39 @@ router.post(
 
       if (existing.rows.length > 0 && existing.rows[0].status === 'active') {
         // Compte déjà actif : on ne crée rien, on ne révèle rien de plus.
-        // On notifie discrètement par e-mail le titulaire du compte, qui
-        // saura qu'une tentative d'inscription a eu lieu sur son adresse.
         await client.query('COMMIT');
         return res.json(GENERIC_SIGNUP_RESPONSE);
       }
 
       if (existing.rows.length > 0 && existing.rows[0].status === 'pending') {
-        // Compte en attente de vérification : on régénère un token plutôt
-        // que de créer un doublon.
+        // Compte en attente de vérification : on active automatiquement si EMAIL_VERIFICATION_REQUIRED=false
+        // sinon on régénère un token
         userId = existing.rows[0].id;
+        
+        if (process.env.EMAIL_VERIFICATION_REQUIRED === 'false') {
+          await client.query('UPDATE users SET status = $1, updated_at = now() WHERE id = $2', ['active', userId]);
+          await client.query('COMMIT');
+          return res.json(GENERIC_SIGNUP_RESPONSE);
+        }
       } else {
+        // Nouveau compte : créer avec status 'active' si EMAIL_VERIFICATION_REQUIRED=false, sinon 'pending'
         const passwordHash = await argon2.hash(password, { type: argon2.argon2id });
+        const status = process.env.EMAIL_VERIFICATION_REQUIRED === 'false' ? 'active' : 'pending';
         const insertResult = await client.query(
           `INSERT INTO users (first_name, last_name, email, password_hash, status)
-           VALUES ($1, $2, $3, $4, 'pending') RETURNING id`,
-          [firstName.trim(), lastName.trim(), email, passwordHash]
+           VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+          [firstName.trim(), lastName.trim(), email, passwordHash, status]
         );
         userId = insertResult.rows[0].id;
       }
 
+      // Si la vérification par email est désactivée, on ne génère pas de token
+      if (process.env.EMAIL_VERIFICATION_REQUIRED === 'false') {
+        await client.query('COMMIT');
+        return res.json(GENERIC_SIGNUP_RESPONSE);
+      }
+
+      // Sinon, on génère le token et on envoie l'email (code existant pour réactivation future)
       const token = generateToken();
       const tokenHash = hashToken(token);
       const expiresAt = getExpiryDate(EMAIL_VERIFICATION_TTL_HOURS);
