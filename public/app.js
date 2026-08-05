@@ -119,9 +119,15 @@ const categoryForms = {
          title: "Téléphonie fixe", 
          desc: "Configuration de la ligne téléphonique", 
          type: 'mixed', 
-         radio: {label:"Type de ligne", 
-                 options:["Poste fixe individuel","Ligne partagée","Aucune (mobile uniquement)"]}, 
-         fields: [{label:"Numéro à transférer (si remplacement)"}] },
+         radio: {label:"Type de ligne" req:true, 
+                 options:["Poste fixe individuel","Ligne partagée","Aucune"]}, 
+         fields: [label:"Numéro à transférer (si remplacement)"],
+        title: "Téléphonie mobile",
+          type: 'mixed',
+         radio: {label:"Type de ligne" req:true, 
+                 options:["Nouveau mobile","Récuperation mobile existant","Aucune"]},
+         fields: [label:"Numéro à récuperer (si repris de l'existant)"],
+        },
         { label: "Validation", title: "Validation", desc: "Vérifiez le récapitulatif avant envoi", type: 'summary' }
       ]},
       demenagement: { title: "Déménagement d'un agent", ref: "DEM", icon: 'truck', steps: [
@@ -136,6 +142,7 @@ const categoryForms = {
         { label: "Mobilier à récupérer", title: "Mobilier à récupérer", desc: "Sélectionnez les éléments à reprendre", type: 'checklist', items: ["Bureau","Chaise","Caisson de rangement","Armoire"] },
         { label: "Matériel informatique à récupérer", title: "Matériel informatique à récupérer", desc: "Équipements à restituer", type: 'checklist', items: ["Ordinateur portable / fixe","Écran(s)","Badge d'accès","Périphériques", "Téléphone mobile professionnel"] },
         { label: "Matériel de téléphonie à récupérer", title: "Matériel de téléphonie à récupérer", desc: "Ligne et poste téléphonique", type: 'mixed', radio: {label:"Action sur la ligne", options:["Clôture définitive","Réaffectation à un autre agent"]}, fields: [] },
+          {desc: "Pour rappel, les Badges d'acces sont a restitués obligatoirement au service RH"}, 
         { label: "Validation", title: "Validation", desc: "Vérifiez le récapitulatif avant envoi", type: 'summary' }
       ]}
     }
