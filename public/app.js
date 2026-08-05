@@ -92,7 +92,7 @@ const categoryMeta = [
   { key: 'equipements-bureau', icon: 'desk', bg: '#5DCAA5', fg: '#04342C' },
   { key: 'vehicule', icon: 'car', bg: '#AFA9EC', fg: '#26215C' },
   { key: 'evenementiel', icon: 'confetti', bg: '#ED93B1', fg: '#4B1528' },
-  { key: 'oeuvres-art', icon: 'palette', bg: '#97C459', fg: '#173404' }
+ //  { key: 'oeuvres-art', icon: 'palette', bg: '#97C459', fg: '#173404' }
 ];
 const categoryForms = {
   'arrivee-depart': {
