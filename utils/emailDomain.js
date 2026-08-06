@@ -2,9 +2,7 @@
 // Reprend exactement la logique validée ensemble : comparaison stricte
 // sur la partie après le @, insensible à la casse.
 
-const ALLOWED_DOMAINS = "culture.gouv.fr" (process.env.ALLOWED_EMAIL_DOMAIN || '')
-  module.exports = {
-  isAllowedDomain: (email) => email.endsWith(`@${ALLOWED_DOMAIN}`),
+const ALLOWED_DOMAINS = (process.env.ALLOWED_EMAIL_DOMAIN || 'culture.gouv.fr')
   .split(',')
   .map((d) => d.trim().toLowerCase())
   .filter(Boolean);
