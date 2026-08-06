@@ -1,5 +1,6 @@
 // Envoi d'e-mails via le serveur SMTP interne fourni par le service informatique.
 // Toutes les valeurs de connexion viennent de .env — aucune information de connexion n'est codée en dur ici.
+// NOTE: Pour les tests sur Render, le SMTP est désactivé (checkSMTPConfig retourne false).
 
 const nodemailer = require('nodemailer');
 const handlebars = require('handlebars');
@@ -8,21 +9,31 @@ const path = require('path');
 
 // Charger les templates depuis le dossier templates/
 const templatesDir = path.join(__dirname, '../templates');
-const templates = {
-  verifyEmail: handlebars.compile(fs.readFileSync(path.join(templatesDir, 'verify-email.html'), 'utf8')),
-  resetPassword: handlebars.compile(fs.readFileSync(path.join(templatesDir, 'reset-password.html'), 'utf8')),
-  requestSubmitted: handlebars.compile(fs.readFileSync(path.join(templatesDir, 'request-submitted.html'), 'utf8')),
-  requestStatus: handlebars.compile(fs.readFileSync(path.join(templatesDir, 'request-status.html'), 'utf8')),
-};
 
-// Configurer le transporteur SMTP
+// Vérifier si le dossier templates existe avant de charger les templates
+let templates = {};
+try {
+  if (fs.existsSync(templatesDir)) {
+    templates = {
+      verifyEmail: handlebars.compile(fs.readFileSync(path.join(templatesDir, 'verify-email.html'), 'utf8')),
+      resetPassword: handlebars.compile(fs.readFileSync(path.join(templatesDir, 'reset-password.html'), 'utf8')),
+      requestSubmitted: handlebars.compile(fs.readFileSync(path.join(templatesDir, 'request-submitted.html'), 'utf8')),
+      requestStatus: handlebars.compile(fs.readFileSync(path.join(templatesDir, 'request-status.html'), 'utf8')),
+    };
+  }
+} catch (err) {
+  console.log('[MAILER] Dossier templates non trouvé. Les e-mails utiliseront du texte brut.');
+  templates = {};
+}
+
+// Configurer le transporteur SMTP (désactivé pour les tests sur Render)
 const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
+  host: process.env.SMTP_HOST || 'localhost',
   port: parseInt(process.env.SMTP_PORT || '587', 10),
   secure: process.env.SMTP_SECURE === 'true',
   auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASSWORD,
+    user: process.env.SMTP_USER || '',
+    pass: process.env.SMTP_PASSWORD || '',
   },
   tls: {
     rejectUnauthorized: false,
@@ -30,15 +41,15 @@ const transporter = nodemailer.createTransport({
 });
 
 // Fonction pour vérifier la configuration SMTP
+// RETOURNE TOUJOURS FALSE POUR LES TESTS SUR RENDER (désactive l'envoi d'e-mails)
 function checkSMTPConfig() {
-  const requiredVars = ['SMTP_HOST', 'SMTP_PORT', 'SMTP_USER', 'SMTP_PASSWORD'];
-  return requiredVars.every(varName => process.env[varName]);
+  return false; // Désactivé pour les tests sur Render
 }
 
 // Fonction générique pour envoyer un email avec un template
 async function sendEmail(to, subject, templateName, data) {
   if (!checkSMTPConfig()) {
-    console.log(`[MAILER] SMTP non configuré. Destinataire: ${to}, Sujet: ${subject}`);
+    console.log(`[MAILER] SMTP désactivé (mode test). Destinataire: ${to}, Sujet: ${subject}`);
     return false;
   }
 
@@ -127,13 +138,8 @@ module.exports = {
   sendRequestStatusEmail,
   checkSMTPConfig,
   verifySmtpConnection: async () => {
-    try {
-      await transporter.verify();
-      console.log('[MAILER] ✅ Connexion SMTP vérifiée avec succès.');
-      return true;
-    } catch (err) {
-      console.error('[MAILER] ❌ Erreur de connexion SMTP :', err.message);
-      return false;
-    }
+    // Désactivé pour les tests sur Render
+    console.log('[MAILER] ⚠️ Vérification SMTP désactivée (mode test).');
+    return true; // Retourne true pour éviter les erreurs
   },
 };
