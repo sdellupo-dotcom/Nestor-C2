@@ -40,7 +40,7 @@ app.use(helmet());
 // Filtre par IP : limite l'accès au réseau interne de l'organisation.
 // Couche de défense complémentaire au filtrage réseau (pare-feu, absence
 // de NAT public) qui reste la protection principale — voir README.md.
-app.use(restrictToLan);
+// app.use(restrictToLan);
 
 
 // Limitation du nombre de tentatives sur les routes sensibles, pour
