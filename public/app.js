@@ -814,11 +814,37 @@ function showUnauthenticatedUI() {
   document.getElementById('screen-accueil').style.display = 'none';
 }
 
-// Bypass authentification (TEMPORAIRE - phase de test, à retirer avant mise en prod)
-function bypassAuth() {
-  currentUser = { authenticated: true, email: 'test@culture.gouv.fr', firstname: 'Test', lastname: 'Utilisateur' };
-  showAuthenticatedUI();
-  renderSuiviLists();
+// Ancienne version (côté client uniquement) :
+// function bypassAuth() {
+//   currentUser = { email: "test@culture.gouv.fr", firstName: "Test", lastName: "Utilisateur", role: "admin" };
+//   showScreen('accueil');
+//   updateUIForAuthState();
+// }
+
+// Nouvelle version (appel backend) :
+async function bypassAuth() {
+  try {
+    const response = await fetch('/api/auth/bypass', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      console.error('[bypassAuth] Erreur :', error);
+      alert(error.error || "Impossible d'activer le bypass.");
+      return;
+    }
+
+    const { user } = await response.json();
+    currentUser = user;
+    showScreen('accueil');
+    updateUIForAuthState();
+    alert("Bypass activé ! Vous êtes connecté en mode test.");
+  } catch (err) {
+    console.error('[bypassAuth] Erreur réseau :', err);
+    alert("Erreur réseau. Vérifiez que le serveur est en ligne.");
+  }
 }
 
 // Connexion
