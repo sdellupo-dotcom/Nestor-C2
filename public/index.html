@@ -287,7 +287,7 @@ body { font-family: var(--font-sans); color: var(--text-primary); background: va
           <label class="field-label">Adresse e-mail professionnelle</label>
           <div class="field-input-wrap">
             <span class="svg-icon field-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="1"/><path d="M3 6l9 7 9-7"/></svg></span>
-            <input class="field-input" type="email" id="login-email" placeholder="prenom.nom@mon-domaine.com"/>
+            <input class="field-input" type="email" id="login-email" placeholder="prenom.nom@culture.gouv.fr"/>
           </div>
           <div class="field-error" id="err-login-email">Veuillez saisir une adresse e-mail valide.</div>
         </div>
@@ -317,7 +317,7 @@ body { font-family: var(--font-sans); color: var(--text-primary); background: va
           <label class="field-label">Adresse e-mail professionnelle</label>
           <div class="field-input-wrap">
             <span class="svg-icon field-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="1"/><path d="M3 6l9 7 9-7"/></svg></span>
-            <input class="field-input" type="email" id="forgot-email" placeholder="prenom.nom@mon-domaine.com"/>
+            <input class="field-input" type="email" id="forgot-email" placeholder="prenom.nom@culture.gouv.fr"/>
           </div>
           <div class="field-error" id="err-forgot-email">Veuillez saisir une adresse e-mail valide.</div>
         </div>
@@ -336,7 +336,7 @@ body { font-family: var(--font-sans); color: var(--text-primary); background: va
       <div class="login-view" id="view-signup">
         <div class="back-link" onclick="showLoginViewReal('login')"><span class="svg-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 6l-6 6 6 6"/></svg></span>Retour à la connexion</div>
         <div class="login-card-title">Créer un compte</div>
-        <div class="login-card-sub">Inscription réservée aux agents mon-domaine.com</div>
+        <div class="login-card-sub">Inscription réservée aux agents culture.gouv.fr</div>
         <div class="field-row">
           <div class="field">
             <label class="field-label">Prénom</label>
@@ -351,7 +351,7 @@ body { font-family: var(--font-sans); color: var(--text-primary); background: va
           <label class="field-label">Adresse e-mail professionnelle</label>
           <div class="field-input-wrap">
             <span class="svg-icon field-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="1"/><path d="M3 6l9 7 9-7"/></svg></span>
-            <input class="field-input" type="email" id="su-email" placeholder="prenom.nom@mon-domaine.com" oninput="checkDomain()"/>
+            <input class="field-input" type="email" id="su-email" placeholder="prenom.nom@culture.gouv.fr" oninput="checkDomain()"/>
           </div>
           <div id="domain-feedback"></div>
           <div class="field-error" id="err-su-email">Veuillez saisir une adresse e-mail valide.</div>
@@ -379,7 +379,7 @@ body { font-family: var(--font-sans); color: var(--text-primary); background: va
         </div>
         <button class="login-btn" onclick="trySubmitSignup()">Créer mon compte</button>
         <div class="debug-note">
-          Démo : utilisez <code>existant@mon-domaine.com</code> pour simuler un compte déjà actif, ou <code>attente@mon-domaine.com</code> pour un compte en attente. Les deux cas affichent le même message que pour un nouveau compte.
+          Démo : utilisez <code>existant@culture.gouv.fr</code> pour simuler un compte déjà actif, ou <code>attente@culture.gouv.fr</code> pour un compte en attente. Les deux cas affichent le même message que pour un nouveau compte.
         </div>
       </div>
 
@@ -408,14 +408,14 @@ body { font-family: var(--font-sans); color: var(--text-primary); background: va
         <div class="success-box">
           <div class="success-icon danger"><span class="svg-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg></span></div>
           <div class="success-title">Domaine non autorisé</div>
-          <div class="success-text">Seules les adresses e-mail du domaine <strong style="color:var(--text-primary)">mon-domaine.com</strong> peuvent créer un compte sur cette plateforme.</div>
+          <div class="success-text">Seules les adresses e-mail du domaine <strong style="color:var(--text-primary)">culture.gouv.fr</strong> peuvent créer un compte sur cette plateforme.</div>
           <button class="login-btn" onclick="showLoginViewReal('signup')" style="width:auto; padding:9px 24px;">Retour à l'inscription</button>
         </div>
       </div>
 
     </div>
   </div>
-  <div class="footer-note">Accès réservé aux agents mon-domaine.com. En cas de difficulté, contactez le support informatique.</div>
+  <div class="footer-note">Accès réservé aux agents culture.gouv.fr. En cas de difficulté, contactez le support informatique.</div>
 </div>
 
 <!-- ===================== ECRAN GENERIQUE CATEGORIE / FORMULAIRE ===================== -->
