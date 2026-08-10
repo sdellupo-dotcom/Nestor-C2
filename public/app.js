@@ -816,7 +816,7 @@ function showUnauthenticatedUI() {
 
 // Bypass authentification (TEMPORAIRE - phase de test, à retirer avant mise en prod)
 function bypassAuth() {
-  currentUser = { authenticated: true, email: 'test@mon-domaine.com', firstname: 'Test', lastname: 'Utilisateur' };
+  currentUser = { authenticated: true, email: 'test@culture.gouv.fr', firstname: 'Test', lastname: 'Utilisateur' };
   showAuthenticatedUI();
   renderSuiviLists();
 }
