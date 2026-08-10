@@ -369,7 +369,26 @@ router.post(
     }
   }
 );
+// ---------------------------------------------------------------
+// POST /api/auth/bypass — Contournement de l'authentification en mode test
+// ---------------------------------------------------------------
+router.post('/bypass', (req, res) => {
+  if (process.env.NODE_ENV !== 'test' && process.env.NODE_ENV !== 'development') {
+    return res.status(403).json({ error: "Cette route est désactivée hors mode test/développement." });
+  }
 
+  // Créer une session utilisateur fictive pour le test
+  req.session.userId = 1; // ID utilisateur fictif
+  req.session.userEmail = "test@culture.gouv.fr";
+  req.session.userRole = "admin";
+  req.session.userFirstName = "Test";
+  req.session.userLastName = "Utilisateur";
+
+  return res.json({
+    message: "Bypass activé. Vous êtes connecté en mode test.",
+    user: { email: "test@culture.gouv.fr", role: "admin", firstName: "Test", lastName: "Utilisateur" },
+  });
+});
 // ---------------------------------------------------------------
 // POST /api/auth/setup-password — utilisée par un compte valideur créé
 // par l'administrateur, pour définir son propre mot de passe à partir du
