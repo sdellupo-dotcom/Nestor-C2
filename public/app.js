@@ -285,6 +285,111 @@ function updateWizardUI() {
 showScreen('accueil');
 checkAuth();
 
+// Fonction pour soumettre la connexion
+async function trySubmitLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-pass').value;
+
+  if (!email || !password) {
+    alert("Veuillez remplir tous les champs.");
+    return;
+  }
+
+  try {
+    const response = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+      credentials: 'include',
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      alert(error.error || "Erreur de connexion.");
+      return;
+    }
+
+    const { user } = await response.json();
+    currentUser = user;
+    showScreen('accueil');
+    updateUIForAuthState();
+  } catch (err) {
+    console.error('[trySubmitLogin] Erreur :', err);
+    alert("Erreur réseau. Vérifiez votre connexion.");
+  }
+}
+
+// Fonction pour soumettre l'inscription
+async function trySubmitSignup() {
+  const firstName = document.getElementById('su-firstname').value.trim();
+  const lastName = document.getElementById('su-lastname').value.trim();
+  const email = document.getElementById('su-email').value.trim();
+  const password = document.getElementById('su-pass').value;
+  const password2 = document.getElementById('su-pass2').value;
+
+  if (!firstName || !lastName || !email || !password) {
+    alert("Veuillez remplir tous les champs.");
+    return;
+  }
+
+  if (password !== password2) {
+    alert("Les mots de passe ne correspondent pas.");
+    return;
+  }
+
+  try {
+    const response = await fetch('/api/auth/signup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ firstName, lastName, email, password }),
+      credentials: 'include',
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      alert(error.error || "Erreur lors de l'inscription.");
+      return;
+    }
+
+    const result = await response.json();
+    alert(result.message);
+    showLoginViewReal('verify');
+  } catch (err) {
+    console.error('[trySubmitSignup] Erreur :', err);
+    alert("Erreur réseau. Vérifiez votre connexion.");
+  }
+}
+
+// Fonction pour soumettre la demande de réinitialisation de mot de passe
+async function trySubmitForgot() {
+  const email = document.getElementById('forgot-email').value.trim();
+
+  if (!email) {
+    alert("Veuillez saisir une adresse e-mail.");
+    return;
+  }
+
+  try {
+    const response = await fetch('/api/auth/forgot-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+      credentials: 'include',
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      alert(error.error || "Erreur lors de l'envoi du lien de réinitialisation.");
+      return;
+    }
+
+    showLoginViewReal('forgot-success');
+  } catch (err) {
+    console.error('[trySubmitForgot] Erreur :', err);
+    alert("Erreur réseau. Vérifiez votre connexion.");
+  }
+}
+
 // =============================================================================
 // Écouteurs d'événements (pour éviter les inline handlers bloqués par CSP)
 // =============================================================================
