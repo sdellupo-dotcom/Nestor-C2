@@ -1508,3 +1508,66 @@ window.addEventListener('DOMContentLoaded', () => {
   checkAuth();
   renderCategories('');
 });
+// =============================================================================
+// Écouteurs d'événements (pour éviter les inline handlers bloqués par CSP)
+// =============================================================================
+document.addEventListener('DOMContentLoaded', () => {
+  // --- Authentification ---
+  // Bypass
+  const bypassBtn = document.getElementById('bypass-auth-btn');
+  if (bypassBtn) bypassBtn.addEventListener('click', bypassAuth);
+
+  // Connexion
+  const loginBtn = document.getElementById('login-btn');
+  if (loginBtn) loginBtn.addEventListener('click', trySubmitLogin);
+
+  // Inscription
+  const signupBtn = document.getElementById('signup-btn');
+  if (signupBtn) signupBtn.addEventListener('click', trySubmitSignup);
+
+  // Mot de passe oublié
+  const forgotPasswordBtn = document.getElementById('forgot-password-btn');
+  if (forgotPasswordBtn) forgotPasswordBtn.addEventListener('click', () => showLoginViewReal('forgot'));
+
+  // Envoyer lien de réinitialisation
+  const sendResetBtn = document.getElementById('send-reset-btn');
+  if (sendResetBtn) sendResetBtn.addEventListener('click', trySubmitForgot);
+
+  // Retour à la connexion
+  const backToLogin = document.getElementById('back-to-login');
+  if (backToLogin) backToLogin.addEventListener('click', () => showLoginViewReal('login'));
+
+  // --- Vérification en temps réel ---
+  // Vérification du domaine
+  const suEmail = document.getElementById('su-email');
+  if (suEmail) suEmail.addEventListener('input', checkDomain);
+
+  // Vérification de la force du mot de passe
+  const suPass = document.getElementById('su-pass');
+  if (suPass) suPass.addEventListener('input', checkStrength);
+
+  // --- Recherche ---
+  // Bouton de recherche
+  const searchBtn = document.getElementById('search-btn');
+  if (searchBtn) searchBtn.addEventListener('click', filterCategoriesReal);
+
+  // Champ de recherche
+  const searchInput = document.getElementById('search-input');
+  if (searchInput) searchInput.addEventListener('input', filterCategories);
+
+  // --- Onglets ---
+  const tabAccueil = document.getElementById('tab-accueil');
+  if (tabAccueil) tabAccueil.addEventListener('click', () => showTab('accueil'));
+
+  const tabSuivi = document.getElementById('tab-suivi');
+  if (tabSuivi) tabSuivi.addEventListener('click', () => showTab('suivi'));
+
+  // --- Formulaires ---
+  // Bouton "Précédent" dans le wizard
+  const btnPrev = document.getElementById('btn-prev');
+  if (btnPrev) btnPrev.addEventListener('click', prevStep);
+
+  // Bouton "Suivant" dans le wizard
+  const btnNext = document.getElementById('btn-next');
+  if (btnNext) btnNext.addEventListener('click', nextStep);
+});
