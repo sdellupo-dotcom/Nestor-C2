@@ -462,6 +462,7 @@ router.post(
 // ---------------------------------------------------------------
 // GET /api/auth/me  — savoir si une session est active (utile au chargement du front)
 // ---------------------------------------------------------------
+// GET /api/auth/me — Vérifier si une session est active
 router.get('/me', (req, res) => {
   if (!req.session || !req.session.userId) {
     return res.status(401).json({ authenticated: false });
