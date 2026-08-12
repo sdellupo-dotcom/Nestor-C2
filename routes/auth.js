@@ -370,28 +370,27 @@ router.post(
   }
 );
 // ---------------------------------------------------------------
-// POST /api/auth/bypass — Contournement de l'authentification en mode test
+// POST /api/auth/bypass
 // ---------------------------------------------------------------
 router.post('/bypass', (req, res) => {
   // Autoriser le bypass si :
-  // 1. On est en mode test/développement, OU
-  // 2. La variable RENDER_ENV est définie (pour Render), OU
-  // 3. On est sur le domaine nestor-c2.onrender.com
+  // - On est en mode test/développement, OU
+  // - On est sur Render (via RENDER_ENV ou host)
   const isRender = process.env.RENDER_ENV === 'true' || req.headers.host?.includes('nestor-c2.onrender.com');
-  if (process.env.NODE_ENV !== 'test' && process.env.NODE_ENV !== 'development') {
-    return res.status(403).json({ error: "Cette route est désactivée hors mode test/développement."&& !isRender) 
+
+  if (process.env.NODE_ENV !== 'test' && process.env.NODE_ENV !== 'development' && !isRender) {
     return res.status(403).json({ error: "Cette route est désactivée." });
   }
 
-  // Créer une session utilisateur fictive pour le test
-  req.session.userId = 1; // ID utilisateur fictif
+  // Créer une session utilisateur fictive
+  req.session.userId = 1;
   req.session.userEmail = "test@culture.gouv.fr";
   req.session.userRole = "admin";
   req.session.userFirstName = "Test";
   req.session.userLastName = "Utilisateur";
 
   return res.json({
-    message: "Bypass activé. Vous êtes connecté en mode test.",
+    message: "Bypass activé.",
     user: { email: "test@culture.gouv.fr", role: "admin", firstName: "Test", lastName: "Utilisateur" },
   });
 });
