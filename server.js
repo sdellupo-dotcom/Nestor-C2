@@ -112,7 +112,7 @@ app.get('/setup-password', (req, res) => {
 // ---------------------------------------------------------------
 // Fichiers statiques du front-end (public/index.html et ses ressources).
 // ---------------------------------------------------------------
-app.use(express.static(path.join(__dirname, '..', 'public')));
+app.use(express.static(path.join(__dirname, 'public')));
 
 // ---------------------------------------------------------------
 // Démarrage
