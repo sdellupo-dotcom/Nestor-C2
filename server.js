@@ -76,7 +76,7 @@ app.use(
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      secure: cookieSecure,
+      secure: true,  // Toujours true sur Render (HTTPS)
       maxAge: 1000 * 60 * 60 * 8, // 8 heures
       sameSite: 'lax',
     },
