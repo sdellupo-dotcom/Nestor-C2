@@ -22,6 +22,22 @@ function checkSMTPConfig() {
   return requiredVars.every(varName => process.env[varName]);
 }
 
+async function verifySmtpConnection() {
+  if (!checkSMTPConfig()) {
+    console.warn('[MAILER] SMTP non configuré. Vérification de connexion ignorée.');
+    return false;
+  }
+
+  try {
+    await transporter.verify();
+    console.log('[MAILER] Connexion SMTP OK.');
+    return true;
+  } catch (err) {
+    console.error('[MAILER] Impossible de vérifier la connexion SMTP :', err.message);
+    return false;
+  }
+}
+
 async function sendVerificationEmail(email, firstName, verificationLink) {
   if (!checkSMTPConfig()) {
     console.log('[MAILER] SMTP non configuré. Lien de vérification:', verificationLink);
@@ -55,4 +71,4 @@ async function sendVerificationEmail(email, firstName, verificationLink) {
   }
 }
 
-module.exports = { sendVerificationEmail, checkSMTPConfig };
+module.exports = { sendVerificationEmail, checkSMTPConfig, verifySmtpConnection };
