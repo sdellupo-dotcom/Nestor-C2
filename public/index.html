@@ -239,8 +239,8 @@ body { font-family: var(--font-sans); color: var(--text-primary); background: va
       <div class="search-box">
         <div class="search-label">Rechercher un formulaire par mot clé</div>
         <div class="search-row">
-          <input class="search-input" type="text" id="search-input" placeholder="Exemple : badge, mobilier, reliure, véhicule..." oninput="filterCategories()"/>
-          <button class="search-btn" onclick="filterCategoriesReal()">Rechercher</button>
+          <input class="search-input" type="text" id="search-input" placeholder="Exemple : badge, mobilier, reliure, véhicule..."/>
+          <button class="search-btn" id="search-btn">Rechercher</button>
         </div>
       </div>
       <div class="cat-section-title">Tous les formulaires par catégorie</div>
@@ -299,13 +299,13 @@ body { font-family: var(--font-sans); color: var(--text-primary); background: va
           </div>
           <div class="field-error" id="err-login-pass">Veuillez saisir votre mot de passe.</div>
         </div>
-        <button class="login-btn" onclick="trySubmitLogin()">Se connecter</button>
+       <button class="login-btn" id="login-btn">Se connecter</button>
         <div class="login-links">
-          <button class="link-btn" onclick="showLoginViewReal('forgot')">Mot de passe oublié ?</button>
-          <button class="link-btn" onclick="showLoginViewReal('signup')">Créer un compte</button>
+         <button class="link-btn" id="forgot-password-btn">Mot de passe oublié ?</button>
+         <button class="login-btn" id="signup-btn">Créer mon compte</button>
         </div>
         <div class="debug-note">
-          <button class="btn-secondary" style="width:100%; border-style:dashed;" onclick="bypassAuth()">⚠ Bypass authentification (test uniquement)</button>
+          <button class="btn-secondary" style="width:100%; border-style:dashed;" id="bypass-auth-btn">⚠ Bypass authentification (test uniquement)</button>
         </div>
       </div>
 
@@ -321,7 +321,7 @@ body { font-family: var(--font-sans); color: var(--text-primary); background: va
           </div>
           <div class="field-error" id="err-forgot-email">Veuillez saisir une adresse e-mail valide.</div>
         </div>
-        <button class="login-btn" onclick="trySubmitForgot()">Envoyer le lien de réinitialisation</button>
+        <button class="login-btn" id="send-reset-btn">Envoyer le lien de réinitialisation</button>
       </div>
 
       <div class="login-view" id="view-forgot-success">
@@ -334,7 +334,7 @@ body { font-family: var(--font-sans); color: var(--text-primary); background: va
       </div>
 
       <div class="login-view" id="view-signup">
-        <div class="back-link" onclick="showLoginViewReal('login')"><span class="svg-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 6l-6 6 6 6"/></svg></span>Retour à la connexion</div>
+       <div class="back-link" id="back-to-login"><span class="svg-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 6l-6 6 6 6"/></svg></span>Retour à la connexion</div>
         <div class="login-card-title">Créer un compte</div>
         <div class="login-card-sub">Inscription réservée aux agents culture.gouv.fr</div>
         <div class="field-row">
@@ -351,7 +351,7 @@ body { font-family: var(--font-sans); color: var(--text-primary); background: va
           <label class="field-label">Adresse e-mail professionnelle</label>
           <div class="field-input-wrap">
             <span class="svg-icon field-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="1"/><path d="M3 6l9 7 9-7"/></svg></span>
-            <input class="field-input" type="email" id="su-email" placeholder="prenom.nom@culture.gouv.fr" oninput="checkDomain()"/>
+            <input class="field-input" type="email" id="su-email" placeholder="prenom.nom@culture.gouv.fr"/>
           </div>
           <div id="domain-feedback"></div>
           <div class="field-error" id="err-su-email">Veuillez saisir une adresse e-mail valide.</div>
@@ -360,7 +360,7 @@ body { font-family: var(--font-sans); color: var(--text-primary); background: va
           <label class="field-label">Mot de passe</label>
           <div class="field-input-wrap">
             <span class="svg-icon field-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="1"/><path d="M8 11V7a4 4 0 018 0v4"/></svg></span>
-            <input class="field-input" type="password" id="su-pass" placeholder="8 caractères minimum" oninput="checkStrength()"/>
+            <input class="field-input" type="password" id="su-pass" placeholder="8 caractères minimum"/>
           </div>
           <div class="strength-bar">
             <div class="strength-seg" id="seg-1"></div>
