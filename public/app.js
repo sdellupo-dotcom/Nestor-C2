@@ -828,6 +828,10 @@ async function bypassAuth() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
     });
+     // ...
+  } catch (err) {
+    console.error('[bypassAuth] Erreur :', err);
+  }
 
     if (!response.ok) {
       const error = await response.json();
@@ -1213,7 +1217,37 @@ function toggleCat(key) {
 
 // Filtrer les catégories
 function filterCategories() {
-  renderCategories(document.getElementById('search-input').value);
+  //renderCategories(document.getElementById('search-input').value);
+   const searchTerm = document.getElementById('search-input').value.toLowerCase();
+  const categories = document.querySelectorAll('.cat-card');
+
+  categories.forEach(card => {
+    const categoryName = card.querySelector('.cat-name').textContent.toLowerCase();
+    const forms = card.querySelectorAll('.form-item');
+    let hasMatchingForm = false;
+
+    forms.forEach(form => {
+      const formName = form.textContent.toLowerCase();
+      if (formName.includes(searchTerm)) {
+        hasMatchingForm = true;
+      }
+    });
+
+    if (categoryName.includes(searchTerm) || hasMatchingForm) {
+      card.style.display = 'block';
+    } else {
+      card.style.display = 'none';
+    }
+  });
+
+  // Afficher/masquer le message "Aucun résultat"
+  const noResults = document.getElementById('no-results');
+  const visibleCategories = Array.from(categories).filter(card => card.style.display !== 'none');
+  noResults.style.display = visibleCategories.length === 0 ? 'block' : 'none';
+}
+// Fonction pour filtrer les catégories (appelée depuis le bouton Rechercher)
+function filterCategoriesReal() {
+  filterCategories(); // Appelle la fonction existante
 }
 
 // Gérer le clic sur un formulaire
