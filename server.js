@@ -17,6 +17,7 @@ const requestsRoutes = require('./routes/requests');
 const adminRoutes = require('./routes/admin');
 
 const app = express();
+app.set('trust proxy', 1);
 
 // ---------------------------------------------------------------
 // Sécurité de base
@@ -100,19 +101,23 @@ app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
 // correspondantes en JavaScript, avec le token lu dans l'URL.
 // ---------------------------------------------------------------
 app.get('/verify-email', (req, res) => {
-  res.sendFile(path.join(__dirname, '..', 'public', 'verify-email.html'));
+  res.sendFile(path.join(__dirname, 'public', 'verify-email.html'));
 });
 app.get('/reset-password', (req, res) => {
-  res.sendFile(path.join(__dirname, '..', 'public', 'reset-password.html'));
+  res.sendFile(path.join(__dirname, 'public', 'reset-password.html'));
 });
 app.get('/setup-password', (req, res) => {
-  res.sendFile(path.join(__dirname, '..', 'public', 'setup-password.html'));
+  res.sendFile(path.join(__dirname, 'public', 'setup-password.html'));
 });
 
 // ---------------------------------------------------------------
 // Fichiers statiques du front-end (public/index.html et ses ressources).
 // ---------------------------------------------------------------
 app.use(express.static(path.join(__dirname, 'public')));
+
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
 
 // ---------------------------------------------------------------
 // Démarrage
