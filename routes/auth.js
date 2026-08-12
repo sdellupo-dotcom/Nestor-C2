@@ -373,8 +373,14 @@ router.post(
 // POST /api/auth/bypass — Contournement de l'authentification en mode test
 // ---------------------------------------------------------------
 router.post('/bypass', (req, res) => {
+  // Autoriser le bypass si :
+  // 1. On est en mode test/développement, OU
+  // 2. La variable RENDER_ENV est définie (pour Render), OU
+  // 3. On est sur le domaine nestor-c2.onrender.com
+  const isRender = process.env.RENDER_ENV === 'true' || req.headers.host?.includes('nestor-c2.onrender.com');
   if (process.env.NODE_ENV !== 'test' && process.env.NODE_ENV !== 'development') {
-    return res.status(403).json({ error: "Cette route est désactivée hors mode test/développement." });
+    return res.status(403).json({ error: "Cette route est désactivée hors mode test/développement."&& !isRender) 
+    return res.status(403).json({ error: "Cette route est désactivée." });
   }
 
   // Créer une session utilisateur fictive pour le test
