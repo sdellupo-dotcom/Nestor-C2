@@ -8,13 +8,11 @@ const ALLOWED_DOMAINS = (process.env.ALLOWED_EMAIL_DOMAIN || 'culture.gouv.fr')
   .filter(Boolean);
 
 function isAllowedDomain(email) {
-  if (ALLOWED_DOMAINS.length === 0) {
+  if (process.env.ALLOWED_EMAIL_DOMAIN === undefined) {
     console.warn(
-      "[avertissement] ALLOWED_EMAIL_DOMAIN n'est pas configuré — " +
-      "la vérification de domaine est désactivée. À renseigner dans .env une fois " +
-      "le domaine autorisé communiqué par le service informatique."
+      "[avertissement] ALLOWED_EMAIL_DOMAIN non défini dans l'environnement — " +
+      "utilisation du domaine par défaut culture.gouv.fr."
     );
-    return true; // Par défaut, tout est autorisé (pour le développement)
   }
 
   const domain = email.split('@')[1];

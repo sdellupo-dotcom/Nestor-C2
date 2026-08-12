@@ -22,6 +22,50 @@ const { sendVerificationEmail, sendPasswordResetEmail } = require('../utils/mail
 
 const router = express.Router();
 
+function isExchangeConfigured() {
+  return (process.env.AUTH_MODE || '').toLowerCase() === 'exchange' && Boolean(process.env.EXCHANGE_AUTH_URL);
+}
+
+function normalizeExchangeUser(payload) {
+  const user = payload?.user || payload?.account || payload || {};
+  const email = (user.email || user.mail || '').trim().toLowerCase();
+
+  if (!email) return null;
+
+  return {
+    id: user.id || email,
+    email,
+    firstName: user.firstName || user.firstname || user.givenName || '',
+    lastName: user.lastName || user.lastname || user.familyName || '',
+    role: user.role || 'agent',
+  };
+}
+
+async function authenticateWithExchange(email, password) {
+  if (!isExchangeConfigured()) {
+    throw new Error('Le connecteur Exchange n\'est pas configuré.');
+  }
+
+  const response = await fetch(process.env.EXCHANGE_AUTH_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password }),
+  });
+
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(data.error || data.message || 'Échec de l\'authentification Exchange.');
+  }
+
+  const user = normalizeExchangeUser(data);
+  if (!user) {
+    throw new Error('Réponse Exchange incomplète.');
+  }
+
+  return user;
+}
+
 // Message volontairement identique dans tous les cas (nouveau compte,
 // compte déjà actif, compte en attente) pour ne pas permettre à quelqu'un
 // de déduire si une adresse e-mail est déjà inscrite (anti-énumération).
@@ -131,6 +175,29 @@ router.post(
   }
 );
 
+// POST /api/auth/bypass
+router.post('/bypass', (req, res) => {
+  // Le bypass reste disponible tant que le connecteur Exchange n'est pas
+  // configuré. Il permet de continuer à tester le front sans casser la version.
+  const isRender = process.env.RENDER_ENV === 'true' || req.headers.host?.includes('nestor-c2.onrender.com');
+  const exchangeConfigured = isExchangeConfigured();
+
+  if (!exchangeConfigured && process.env.NODE_ENV !== 'test' && process.env.NODE_ENV !== 'development' && !isRender) {
+    return res.status(403).json({ error: "Cette route est désactivée." });
+  }
+
+  req.session.userId = 1;
+  req.session.userEmail = 'test@culture.gouv.fr';
+  req.session.userRole = 'admin';
+  req.session.userFirstName = 'Test';
+  req.session.userLastName = 'Utilisateur';
+
+  return res.json({
+    message: 'Bypass activé.',
+    user: { email: 'test@culture.gouv.fr', role: 'admin', firstName: 'Test', lastName: 'Utilisateur' },
+  });
+});
+
 // ---------------------------------------------------------------
 // GET /api/auth/verify-email?token=...
 // ---------------------------------------------------------------
@@ -206,40 +273,58 @@ router.post(
     const email = req.body.email.trim().toLowerCase();
     const { password } = req.body;
 
-    // Message d'erreur volontairement identique que l'email n'existe pas,
-    // que le mot de passe soit faux, ou que le compte ne soit pas activé —
-    // afin de ne pas indiquer à un attaquant ce qui a échoué précisément.
     const GENERIC_LOGIN_ERROR = { error: 'Adresse e-mail ou mot de passe incorrect.' };
 
     try {
-      const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
-      if (result.rows.length === 0) {
-        return res.status(401).json(GENERIC_LOGIN_ERROR);
+      let user;
+
+      if (isExchangeConfigured()) {
+        try {
+          user = await authenticateWithExchange(email, password);
+        } catch (exchangeError) {
+          console.warn('[auth/login] Exchange auth failed:', exchangeError.message);
+          return res.status(401).json({ error: exchangeError.message || 'Échec de l’authentification.' });
+        }
+      } else {
+        const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
+        if (result.rows.length === 0) {
+          return res.status(401).json(GENERIC_LOGIN_ERROR);
+        }
+
+        const localUser = result.rows[0];
+
+        if (localUser.status !== 'active') {
+          return res.status(401).json({
+            error: "Ce compte n'est pas encore activé. Vérifiez votre boîte mail.",
+          });
+        }
+
+        const passwordValid = await argon2.verify(localUser.password_hash, password);
+        if (!passwordValid) {
+          return res.status(401).json(GENERIC_LOGIN_ERROR);
+        }
+
+        user = {
+          id: localUser.id,
+          email: localUser.email,
+          firstName: localUser.first_name,
+          lastName: localUser.last_name,
+          role: localUser.role,
+        };
       }
 
-      const user = result.rows[0];
-
-      if (user.status !== 'active') {
-        return res.status(401).json({
-          error: "Ce compte n'est pas encore activé. Vérifiez votre boîte mail.",
-        });
-      }
-
-      const passwordValid = await argon2.verify(user.password_hash, password);
-      if (!passwordValid) {
-        return res.status(401).json(GENERIC_LOGIN_ERROR);
-      }
-
-      // Connexion réussie : on crée la session, en y stockant le rôle pour
-      // que requireRole (voir middleware/requireRole.js) puisse vérifier
-      // les autorisations sans requête supplémentaire en base à chaque appel.
       req.session.userId = user.id;
       req.session.userEmail = user.email;
-      req.session.userRole = user.role;
+      req.session.userRole = user.role || 'agent';
 
       return res.json({
         message: 'Connexion réussie.',
-        user: { firstName: user.first_name, lastName: user.last_name, email: user.email, role: user.role },
+        user: {
+          firstName: user.firstName,
+          lastName: user.lastName,
+          email: user.email,
+          role: user.role || 'agent',
+        },
       });
     } catch (err) {
       console.error('[auth/login] Erreur :', err);
@@ -369,31 +454,7 @@ router.post(
     }
   }
 );
-// ---------------------------------------------------------------
-// POST /api/auth/bypass
-// ---------------------------------------------------------------
-router.post('/bypass', (req, res) => {
-  // Autoriser le bypass si :
-  // - On est en mode test/développement, OU
-  // - On est sur Render (via RENDER_ENV ou host)
-  const isRender = process.env.RENDER_ENV === 'true' || req.headers.host?.includes('nestor-c2.onrender.com');
 
-  if (process.env.NODE_ENV !== 'test' && process.env.NODE_ENV !== 'development' && !isRender) {
-    return res.status(403).json({ error: "Cette route est désactivée." });
-  }
-
-  // Créer une session utilisateur fictive
-  req.session.userId = 1;
-  req.session.userEmail = "test@culture.gouv.fr";
-  req.session.userRole = "admin";
-  req.session.userFirstName = "Test";
-  req.session.userLastName = "Utilisateur";
-
-  return res.json({
-    message: "Bypass activé.",
-    user: { email: "test@culture.gouv.fr", role: "admin", firstName: "Test", lastName: "Utilisateur" },
-  });
-});
 // ---------------------------------------------------------------
 // POST /api/auth/setup-password — utilisée par un compte valideur créé
 // par l'administrateur, pour définir son propre mot de passe à partir du
@@ -462,7 +523,6 @@ router.post(
 // ---------------------------------------------------------------
 // GET /api/auth/me  — savoir si une session est active (utile au chargement du front)
 // ---------------------------------------------------------------
-// GET /api/auth/me — Vérifier si une session est active
 router.get('/me', (req, res) => {
   if (!req.session || !req.session.userId) {
     return res.status(401).json({ authenticated: false });
