@@ -821,17 +821,14 @@ function showUnauthenticatedUI() {
 //   updateUIForAuthState();
 // }
 
-// Nouvelle version (appel backend) :
+// ✅ Version corrigée de bypassAuth()
 async function bypassAuth() {
   try {
     const response = await fetch('/api/auth/bypass', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
     });
-     // ...
-  } catch (err) {
-    console.error('[bypassAuth] Erreur :', err);
-  }
 
     if (!response.ok) {
       const error = await response.json();
